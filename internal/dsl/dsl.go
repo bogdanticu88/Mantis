@@ -129,16 +129,29 @@ func preprocessQuotes(expr string) string {
 				}
 			}
 		case '\'':
+			start := i
 			i++
 			var buf strings.Builder
-			for i < len(runes) && runes[i] != '\'' {
+			closed := false
+			for i < len(runes) {
+				if runes[i] == '\'' {
+					closed = true
+					break
+				}
 				buf.WriteRune(runes[i])
 				i++
 			}
-			if i < len(runes) {
+			if closed {
 				i++ // consume closing quote
+				out.WriteString(strconv.Quote(buf.String()))
+			} else {
+				// No closing quote - almost certainly a typo. Emit the
+				// fragment as-is rather than quietly turning it into a
+				// valid-but-wrong expression; go/parser will raise a real
+				// syntax error on the stray quote instead.
+				out.WriteString(string(runes[start:]))
+				i = len(runes)
 			}
-			out.WriteString(strconv.Quote(buf.String()))
 		default:
 			out.WriteRune(runes[i])
 			i++

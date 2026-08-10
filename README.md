@@ -166,7 +166,12 @@ would be genuinely useful and isn't built). Azure DevOps gets a native
 reporter (`--report azdo`); GitHub/GitLab still only get file-based
 SARIF/JUnit, no PR annotations.
 
-Also no `go test` suite yet - everything so far has been validated by
-actually running each command against a local fixture server and checking
-the output, not by unit tests. That's the next thing worth doing before
-this goes much further.
+The core logic packages (dsl, gate, jsonpath, findings, environments,
+templates, httpclient, the dast passive checks, smoke assertions, the
+OpenAPI reader, all five reporters) have a `go test` suite - run with
+`go test ./...`. `cmd/mantis` itself doesn't yet; it's still verified by
+actually running each command against a local fixture server rather than
+by unit tests. The API package's missing-auth/method-abuse/BOLA checks and
+the DAST crawler are also untested directly, since they need more scaffolding
+(a fake OpenAPI-backed server, an HTML-serving one) than was worth setting
+up for this pass - worth doing before this goes much further.
