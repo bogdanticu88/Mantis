@@ -1,0 +1,24 @@
+id: exposed-actuator-env
+info:
+  name: Spring Boot Actuator Exposure
+  severity: high
+  tags: [exposure, spring, configuration]
+  description: "The Spring Boot Actuator /actuator/env endpoint is publicly reachable, exposing environment properties, active profiles and potentially secrets bound from configuration."
+  remediation: "Disable or authenticate Actuator endpoints in production (management.endpoints.web.exposure.include), and never expose /env or /heapdump publicly."
+  cwe: "CWE-215"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /actuator/env
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["activeProfiles", "propertySources"]
+        condition: or
+    extractors:
+      - type: json
+        name: active_profiles
+        path: "$.activeProfiles"

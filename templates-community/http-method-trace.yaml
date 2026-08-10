@@ -1,0 +1,16 @@
+id: http-trace-method-enabled
+info:
+  name: HTTP TRACE Method Enabled
+  severity: low
+  tags: [http-methods, misconfiguration]
+  description: "The server accepts the TRACE method, which can be combined with certain browser bugs (Cross-Site Tracing) to bypass HttpOnly cookie protections."
+  remediation: "Disable the TRACE (and TRACK) HTTP methods at the web server."
+  cwe: "CWE-16"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: TRACE
+    path: /
+    matchers:
+      - type: status
+        status: [200]

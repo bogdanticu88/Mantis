@@ -1,0 +1,19 @@
+id: missing-security-headers
+info:
+  name: Missing Security Headers
+  severity: low
+  tags: [exposure, headers, misconfiguration]
+  description: "The response does not set common browser security headers (Strict-Transport-Security, Content-Security-Policy), increasing exposure to clickjacking, MIME-sniffing and protocol downgrade attacks."
+  remediation: "Set Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options and Content-Security-Policy on all responses."
+  cwe: "CWE-693"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: dsl
+        dsl: "header('Strict-Transport-Security') == '' && header('Content-Security-Policy') == ''"

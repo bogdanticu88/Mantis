@@ -1,0 +1,20 @@
+id: exposed-swagger-docs
+info:
+  name: Exposed Swagger/OpenAPI Documentation
+  severity: low
+  tags: [exposure, api, configuration]
+  description: "An OpenAPI/Swagger definition is publicly accessible, revealing the full API surface (endpoints, parameters, schemas) to anyone."
+  remediation: "Require authentication for API documentation endpoints in non-development environments, or restrict them to internal networks."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /v2/api-docs
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["\"swagger\"", "\"openapi\""]
+        condition: or

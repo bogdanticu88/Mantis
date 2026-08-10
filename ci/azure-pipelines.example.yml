@@ -1,0 +1,74 @@
+# Example Azure Pipelines integration for Mantis.
+#
+# Assumes this repository (mantis) is checked out alongside the application
+# under test, or vendored as a submodule at `mantis/` in the app's own repo.
+# Adjust `workingDirectory: mantis` / the binary path once Mantis has its
+# own release process and you're pulling a prebuilt binary instead of
+# building from source every run.
+#
+# What this wires up, and why:
+#   - `--report junit,sarif,html,azdo` in a SINGLE scan produces all four
+#     outputs from one run against the target — not four separate scans.
+#   - `azdo` streams ##vso logging commands directly to the live task's
+#     console, so findings show up as real Issues in the pipeline UI with
+#     zero extra extensions installed.
+#   - `--output-dir` puts the file-based reports at predictable paths so
+#     PublishTestResults@2 (JUnit) and PublishPipelineArtifact (SARIF/HTML)
+#     can find them.
+#   - `continueOnError: true` on the scan step lets the publish steps still
+#     run when the gate fails — the job is still correctly marked failed,
+#     both by Mantis's own exit code and by the `task.complete result=Failed`
+#     command `--report azdo` emits when the gate doesn't pass.
+
+trigger: none # this file is a reusable step block, not a standalone pipeline
+
+parameters:
+  - name: environment
+    type: string
+    default: test
+  - name: failOn
+    type: string
+    default: high
+
+variables:
+  mantisOutDir: $(Build.ArtifactStagingDirectory)/mantis
+
+steps:
+  - task: GoTool@0
+    inputs:
+      version: "1.22"
+
+  - script: go build -o $(Agent.TempDirectory)/mantis ./cmd/mantis
+    displayName: "Build Mantis"
+    workingDirectory: mantis
+
+  - script: |
+      mkdir -p "$(mantisOutDir)"
+      "$(Agent.TempDirectory)/mantis" validate \
+        --environment ${{ parameters.environment }} \
+        --environments-file mantis/environments.yaml \
+        --fail-on ${{ parameters.failOn }} \
+        --report "junit,sarif,html,azdo" \
+        --output-dir "$(mantisOutDir)"
+    displayName: "Run Mantis security gate"
+    continueOnError: true
+
+  - task: PublishTestResults@2
+    displayName: "Publish smoke + finding results"
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFormat: "JUnit"
+      testResultsFiles: "$(mantisOutDir)/mantis-report.junit.xml"
+      testRunTitle: "Mantis - ${{ parameters.environment }}"
+
+  - task: PublishPipelineArtifact@1
+    displayName: "Publish SARIF + HTML reports"
+    condition: succeededOrFailed()
+    inputs:
+      targetPath: "$(mantisOutDir)"
+      artifact: "mantis-report-${{ parameters.environment }}"
+
+  # If your org has GitHub Advanced Security / Azure DevOps Advanced
+  # Security enabled, you can also publish the SARIF file to its code
+  # scanning results via the relevant task for your setup — that's org-
+  # specific enough that it's left out of this example.

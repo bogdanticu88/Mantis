@@ -1,0 +1,16 @@
+id: server-header-version-disclosure
+info:
+  name: Server Header Discloses Version Information
+  severity: info
+  tags: [exposure, fingerprinting]
+  description: "The Server response header discloses specific software version information, useful for targeting known vulnerabilities."
+  remediation: "Suppress or genericize the Server header at the web server/proxy layer."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers:
+      - type: dsl
+        dsl: "regex('[0-9]+\\.[0-9]+', header('Server'))"

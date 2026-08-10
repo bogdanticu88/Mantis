@@ -1,0 +1,42 @@
+id: payments-lifecycle
+type: smoke
+
+steps:
+  - id: health
+    request:
+      method: GET
+      path: /api/health
+    assertions:
+      - status: 200
+      - path: "$.status"
+        equals: ok
+
+  - id: create-payment
+    request:
+      method: POST
+      path: /api/payments
+      headers:
+        Content-Type: application/json
+      body: '{"amount": 100, "currency": "EUR"}'
+    assertions:
+      - status: 201
+      - path: "$.id"
+        exists: true
+      - path: "$.currency"
+        equals: EUR
+    extract:
+      - name: payment_id
+        path: "$.id"
+
+  - id: retrieve-payment
+    request:
+      method: GET
+      path: "/api/payments/${payment_id}"
+    assertions:
+      - status: 200
+      - path: "$.status"
+        equals: settled
+
+cleanup:
+  - method: DELETE
+    path: "/api/payments/${payment_id}"

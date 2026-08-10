@@ -1,0 +1,21 @@
+id: stack-trace-disclosure
+info:
+  name: Stack Trace / Debug Error Disclosure
+  severity: medium
+  tags: [exposure, error-handling]
+  description: "An error response includes a full stack trace or interpreter traceback, disclosing internal file paths, framework versions and code structure."
+  remediation: "Disable debug/verbose error pages in non-development environments; return generic error responses and log details server-side only."
+  cwe: "CWE-209"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /mantis-nonexistent-path-probe-9f3a
+    matchers:
+      - type: regex
+        regex:
+          - "Traceback \\(most recent call last\\)"
+          - "at [a-zA-Z0-9_.]+\\([a-zA-Z0-9_.]+\\.java:[0-9]+\\)"
+          - "Fatal error:.*on line [0-9]+"
+          - "System\\.Exception"
+        condition: or

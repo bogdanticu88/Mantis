@@ -1,0 +1,19 @@
+id: open-redirect
+info:
+  name: Open Redirect
+  severity: medium
+  tags: [redirect, misconfiguration]
+  description: "A redirect parameter accepts an arbitrary external URL and the server issues a redirect to it, which can be abused for phishing."
+  remediation: "Validate redirect targets against an allowlist of known-safe relative paths or domains."
+  cwe: "CWE-601"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: "/redirect?url=https://mantis-redirect-test.invalid"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [301, 302, 303, 307, 308]
+      - type: dsl
+        dsl: "contains(header('Location'), 'mantis-redirect-test.invalid')"

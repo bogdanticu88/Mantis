@@ -1,0 +1,17 @@
+id: ssrf-azure-imds-probe
+info:
+  name: Possible SSRF to Azure Instance Metadata Service
+  severity: high
+  tags: [ssrf, injection, azure, cloud]
+  description: "A URL-fetching parameter accepted the Azure Instance Metadata Service (IMDS) address and the response appears to contain metadata content. This template uses a generic 'url' parameter name — adapt the path/parameter to the target application's actual URL-fetching endpoint for real coverage. Azure IMDS requires a 'Metadata: true' request header and rejects requests without it (400 Bad Request), which is a real SSRF mitigation Azure provides by default — a match here means the vulnerable code path forwards that header (or something downstream of it does); the absence of a match does NOT rule out SSRF, since a blind fetch primitive that can't set headers will be blocked by Azure's own default protection even though the SSRF exists. Verify manually with a request-forgery primitive that controls headers, not just the URL, before concluding this is a false negative."
+  remediation: "Block outbound requests to link-local/metadata addresses (169.254.169.254) from server-side request paths; use Azure's IMDS access controls (NSG rule denying 169.254.169.254 from application subnets where IMDS access isn't required); use an allowlist of permitted destination hosts."
+  cwe: "CWE-918"
+  owasp: "A10:2021-Server-Side Request Forgery"
+
+requests:
+  - method: GET
+    path: "/?url=http://169.254.169.254/metadata/instance?api-version=2021-02-01"
+    matchers:
+      - type: word
+        words: ["azEnvironment", "subscriptionId", "resourceGroupName", "\"vmId\""]
+        condition: or

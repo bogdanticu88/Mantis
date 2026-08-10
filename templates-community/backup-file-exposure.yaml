@@ -1,0 +1,19 @@
+id: exposed-ds-store
+info:
+  name: Exposed .DS_Store File
+  severity: low
+  tags: [exposure, information-disclosure]
+  description: "A .DS_Store file is publicly accessible, which can leak the names of files and directories not otherwise linked from the application."
+  remediation: "Block access to dotfiles (.DS_Store, .git, .svn, etc.) at the web server, and avoid deploying macOS Finder metadata files."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /.DS_Store
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex: ["^Bud1"]

@@ -1,0 +1,20 @@
+id: insecure-cookie-flags
+info:
+  name: Cookie Set Without Secure/HttpOnly Flags
+  severity: medium
+  tags: [cookies, misconfiguration]
+  description: "A Set-Cookie header is present without the Secure and HttpOnly attributes, increasing the risk of cookie theft over plaintext transport or via XSS."
+  remediation: "Set Secure, HttpOnly and an explicit SameSite attribute on all session cookies."
+  cwe: "CWE-614"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words: ["Set-Cookie"]
+      - type: dsl
+        dsl: "!contains(to_lower(header('Set-Cookie')), 'secure') || !contains(to_lower(header('Set-Cookie')), 'httponly')"

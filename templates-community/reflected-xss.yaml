@@ -1,0 +1,16 @@
+id: reflected-xss-basic
+info:
+  name: Reflected Cross-Site Scripting
+  severity: high
+  tags: [xss, injection]
+  description: "A query parameter value is reflected unescaped into the HTML response, allowing script injection."
+  remediation: "Context-appropriately encode all user input before rendering into HTML, and set a restrictive Content-Security-Policy."
+  cwe: "CWE-79"
+  owasp: "A03:2021-Injection"
+
+requests:
+  - method: GET
+    path: "/?q=<script>alert(1337)</script>"
+    matchers:
+      - type: word
+        words: ["<script>alert(1337)</script>"]

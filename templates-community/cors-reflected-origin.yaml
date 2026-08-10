@@ -1,0 +1,18 @@
+id: cors-reflected-origin
+info:
+  name: CORS Reflects Arbitrary Origin
+  severity: high
+  tags: [cors, misconfiguration]
+  description: "The server reflects an arbitrary Origin header back in Access-Control-Allow-Origin, allowing any website to make credentialed cross-origin requests."
+  remediation: "Validate Origin against an explicit server-side allowlist; never reflect the request's Origin verbatim."
+  cwe: "CWE-942"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    headers:
+      Origin: "https://mantis-cors-test.invalid"
+    matchers:
+      - type: dsl
+        dsl: "header('Access-Control-Allow-Origin') == 'https://mantis-cors-test.invalid'"

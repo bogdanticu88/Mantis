@@ -1,0 +1,10 @@
+/mantis
+/mantis.exe
+
+mantis-report.*
+
+*.test
+*.out
+
+.vscode/
+.idea/

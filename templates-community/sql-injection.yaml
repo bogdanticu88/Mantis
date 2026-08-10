@@ -1,0 +1,23 @@
+id: sql-injection-error-based
+info:
+  name: SQL Injection (Error-Based)
+  severity: critical
+  tags: [sqli, injection]
+  description: "A single-quote payload in a query parameter produced a database error message, indicating unsanitized input reaches a SQL query."
+  remediation: "Use parameterized queries/prepared statements exclusively; never concatenate user input into SQL."
+  cwe: "CWE-89"
+  owasp: "A03:2021-Injection"
+
+requests:
+  - method: GET
+    path: "/?id='"
+    matchers:
+      - type: regex
+        regex:
+          - "SQL syntax.*MySQL"
+          - "Warning.*mysql_"
+          - "PostgreSQL.*ERROR"
+          - "ORA-[0-9]{5}"
+          - "SQLite3::"
+          - "Unclosed quotation mark"
+        condition: or

@@ -1,0 +1,22 @@
+id: graphql-introspection-enabled
+info:
+  name: GraphQL Introspection Enabled
+  severity: low
+  tags: [graphql, exposure]
+  description: "The GraphQL endpoint responds to an introspection query, revealing the full schema (types, fields, mutations) to any caller."
+  remediation: "Disable introspection in production, or require authentication for introspection queries."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: POST
+    path: /graphql
+    headers:
+      Content-Type: application/json
+    body: '{"query":"{__schema{types{name}}}"}'
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: json
+        path: "$.data.__schema.types"

@@ -1,0 +1,20 @@
+id: exposed-git-config
+info:
+  name: Exposed .git/config
+  severity: high
+  tags: [exposure, git, source-disclosure]
+  description: "The .git/config file is publicly accessible, which can allow reconstruction of the repository's remote URLs and, combined with other exposed .git objects, the full source tree and history."
+  remediation: "Block access to .git/ at the web server or reverse proxy, and ensure .git is never deployed into the web root."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /.git/config
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["[core]", "repositoryformatversion"]
+        condition: or

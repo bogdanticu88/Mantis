@@ -1,0 +1,20 @@
+id: auth-bypass-internal-headers
+info:
+  name: Possible Authorization Bypass via Internal Headers
+  severity: medium
+  tags: [auth, bypass]
+  description: "The path returned a successful response when common internal-trust headers (X-Original-URL, X-Forwarded-For) were set. This can indicate a reverse proxy/application trust boundary that is bypassable directly. Verify manually against the unauthenticated baseline for this path."
+  remediation: "Never derive authorization decisions from client-suppliable headers; strip X-Original-URL/X-Rewrite-URL/X-Forwarded-* at the edge unless explicitly required and validated."
+  cwe: "CWE-290"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /admin
+    headers:
+      X-Original-URL: /admin
+      X-Forwarded-For: 127.0.0.1
+      X-Custom-IP-Authorization: 127.0.0.1
+    matchers:
+      - type: status
+        status: [200]

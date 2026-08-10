@@ -1,0 +1,19 @@
+application:
+  name: Fixture App
+
+environments:
+  dev:
+    base_url: http://127.0.0.1:8899
+    security_level: aggressive
+
+  test:
+    base_url: https://test.example.com
+    security_level: aggressive
+
+  acceptance:
+    base_url: https://acc.example.com
+    security_level: standard
+
+  production:
+    base_url: https://api.example.com
+    security_level: passive

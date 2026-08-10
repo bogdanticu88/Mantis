@@ -1,0 +1,19 @@
+id: exposed-dotenv
+info:
+  name: Exposed .env File
+  severity: critical
+  tags: [exposure, secrets, configuration]
+  description: "A .env file is publicly accessible. These files typically contain database credentials, API keys and other secrets."
+  remediation: "Remove .env from the web root; store secrets in environment variables injected at runtime or a secrets manager, never in a web-servable file."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /.env
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex: ["(?i)(DB_PASSWORD|API_KEY|SECRET_KEY|AWS_ACCESS_KEY_ID)\\s*="]

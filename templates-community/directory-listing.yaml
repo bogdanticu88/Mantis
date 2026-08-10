@@ -1,0 +1,17 @@
+id: directory-listing
+info:
+  name: Directory Listing Enabled
+  severity: medium
+  tags: [exposure, misconfiguration]
+  description: "The server returns a directory listing instead of an application response, exposing the underlying file structure."
+  remediation: "Disable autoindex/directory browsing on the web server."
+  cwe: "CWE-548"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers:
+      - type: word
+        words: ["Index of /", "<title>Directory listing for"]
+        condition: or

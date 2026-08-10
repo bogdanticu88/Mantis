@@ -1,0 +1,19 @@
+id: path-traversal-etc-passwd
+info:
+  name: Path Traversal (Linux /etc/passwd)
+  severity: critical
+  tags: [traversal, injection]
+  description: "A path traversal payload reached the filesystem and returned the contents of /etc/passwd."
+  remediation: "Canonicalize and validate file paths server-side; never build filesystem paths directly from user input."
+  cwe: "CWE-22"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /static/../../../../../../etc/passwd
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex: ["root:.*:0:0:"]

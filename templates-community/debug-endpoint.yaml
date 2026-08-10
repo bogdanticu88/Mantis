@@ -1,0 +1,20 @@
+id: exposed-debug-vars
+info:
+  name: Exposed Debug/Runtime Variables Endpoint
+  severity: medium
+  tags: [exposure, debug, configuration]
+  description: "A runtime debug/variables endpoint (e.g. Go's expvar) is publicly reachable, exposing internal application state and memory statistics."
+  remediation: "Restrict debug endpoints to localhost or an authenticated internal network."
+  cwe: "CWE-215"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /debug/vars
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["memstats", "cmdline"]
+        condition: or
