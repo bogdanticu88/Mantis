@@ -1,0 +1,78 @@
+# Example GitHub Actions integration for Mantis.
+#
+# Assumes this repository (mantis) is checked out alongside the application
+# under test, or vendored as a submodule at `mantis/` in the app's own repo.
+#
+# What this wires up, and why:
+#   - `--report junit,sarif,html,github` in a SINGLE scan produces all four
+#     outputs from one run against the target - not four separate scans.
+#   - `github` streams ::error/::warning/::notice annotations directly to
+#     the job's console (they show up in the Checks UI and PR diff), and
+#     appends a markdown summary to GITHUB_STEP_SUMMARY - GitHub Actions
+#     sets that env var automatically, no extra configuration needed.
+#   - `--output-dir` puts the file-based reports at predictable paths so
+#     the test-reporter action and artifact upload can find them.
+#   - `continue-on-error: true` on the scan step lets the later steps still
+#     run when the gate fails - the job is still correctly marked failed by
+#     Mantis's own exit code, surfaced via the final "check gate result" step.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        default: test
+      fail-on:
+        type: string
+        default: high
+
+jobs:
+  mantis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build Mantis
+        working-directory: mantis
+        run: go build -o /tmp/mantis ./cmd/mantis
+
+      - name: Run Mantis security gate
+        id: mantis
+        continue-on-error: true
+        run: |
+          mkdir -p mantis-out
+          /tmp/mantis validate \
+            --environment ${{ inputs.environment }} \
+            --environments-file mantis/environments.yaml \
+            --fail-on ${{ inputs.fail-on }} \
+            --report "junit,sarif,html,github" \
+            --output-dir mantis-out
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mantis-out/mantis-report.sarif
+
+      - name: Publish JUnit results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Mantis - ${{ inputs.environment }}
+          path: mantis-out/mantis-report.junit.xml
+          reporter: java-junit
+
+      - name: Upload HTML report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mantis-report-${{ inputs.environment }}
+          path: mantis-out
+
+      - name: Fail the job if the gate failed
+        if: steps.mantis.outcome == 'failure'
+        run: exit 1

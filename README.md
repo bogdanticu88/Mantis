@@ -96,11 +96,13 @@ silently running zero checks and reporting a clean pass.
 
 ### Reporting
 
-Console, JSON, SARIF 2.1.0, JUnit XML, HTML, and a native Azure DevOps
-format that streams `##vso[...]` logging commands directly to a pipeline's
-console - findings show up as real entries in the Issues panel with no
-marketplace extension needed. `--report` takes a comma-separated list
-(`junit,sarif,html,azdo`) so one scan produces every output you need.
+Console, JSON, SARIF 2.1.0, JUnit XML, HTML, a native Azure DevOps format
+that streams `##vso[...]` logging commands directly to a pipeline's
+console (findings show up as real entries in the Issues panel, no
+marketplace extension needed), and a native GitHub Actions format that
+emits `::error`/`::warning`/`::notice` annotations plus a markdown job
+summary. `--report` takes a comma-separated list (`junit,sarif,html,azdo`
+or `junit,sarif,html,github`) so one scan produces every output you need.
 
 ## Architecture
 
@@ -119,10 +121,10 @@ internal/
   environments/        environment profiles and security-level policy
   gate/                 the pass/fail decision
   findings/             the shared finding type
-  reporters/            console/json/sarif/junit/html/azdo output
+  reporters/            console/json/sarif/junit/html/azdo/github output
 templates-community/  starter security templates
 smoke/                example smoke workflow
-ci/                   example pipeline integration (Azure Pipelines)
+ci/                   example pipeline integrations (Azure Pipelines, GitHub Actions)
 ```
 
 Two external dependencies (`gopkg.in/yaml.v3`, `golang.org/x/net/html`).
@@ -160,9 +162,10 @@ go build -o mantis ./cmd/mantis
 ```
 
 See `environments.example.yaml` and `openapi.example.yaml` for config
-examples, and `ci/azure-pipelines.example.yml` for a complete pipeline step
-block (build, run the gate, publish JUnit results and SARIF/HTML
-artifacts).
+examples, and `ci/azure-pipelines.example.yml` / `ci/github-actions.example.yml`
+for complete pipeline step blocks (build, run the gate, publish JUnit
+results, upload the SARIF file to code scanning, publish HTML/SARIF as an
+artifact).
 
 Every scan/dast/smoke/api/validate command accepts `--environment`,
 `--environments-file`, `--fail-on critical|high|medium|low|any`,
@@ -269,7 +272,8 @@ never reach a report or log line.
 
 - Environment drift detection - compare the same finding across
   dev/test/acc/prod and flag regressions introduced between environments
-- Native GitHub Actions annotations / check runs (beyond SARIF upload)
+- GitLab Code Quality / SAST report format (GitHub and Azure DevOps both
+  have native reporters now; GitLab still only gets file-based SARIF/JUnit)
 - More fuzzing payloads/classes (SSRF-via-parameter, XXE, NoSQL injection)
   once the current 5-class set has proven itself low-noise in practice
 

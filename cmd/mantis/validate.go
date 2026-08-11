@@ -28,7 +28,7 @@ func cmdValidate(args []string) error {
 	workflowsDir := fs.String("workflows-dir", "smoke", "directory of smoke workflow YAML files")
 	openapiPath := fs.String("openapi", "", "optional path to an OpenAPI spec for API security tests")
 	failOn := fs.String("fail-on", "high", "minimum severity that fails the gate: critical|high|medium|low|any")
-	report := fs.String("report", "", "comma-separated report formats to write: json,sarif,junit,html,azdo")
+	report := fs.String("report", "", "comma-separated report formats to write: json,sarif,junit,html,azdo,github")
 	output := fs.String("output", "", "exact report output path (only when a single file-based --report format is given)")
 	outputDir := fs.String("output-dir", "", "directory for default-named report files when writing multiple formats (default: current directory)")
 	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification")

@@ -196,10 +196,18 @@ var defaultReportFilenames = map[string]string{
 	"html":  "mantis-report.html",
 }
 
+// streamingFormats never write to a file - they're only meaningful printed
+// live to whatever CI console is watching the job, since that's the only
+// place the platform's agent reads workflow commands from.
+var streamingFormats = map[string]func(io.Writer, reporters.Report) error{
+	"azdo":         reporters.WriteAzureDevOps,
+	"azure-devops": reporters.WriteAzureDevOps,
+	"github":       reporters.WriteGitHubActions,
+	"gha":          reporters.WriteGitHubActions,
+}
+
 // writeReports writes one or more report formats (comma-separated, e.g.
-// "junit,sarif,azdo"). "azdo" is special: it always streams Azure Pipelines
-// logging commands to stdout rather than a file, since that's the only
-// place the pipeline agent will ever read them from.
+// "junit,sarif,azdo,github").
 //
 // For file-based formats: if exactly one is requested and output names an
 // exact path, that path is used verbatim. Otherwise each format is written
@@ -221,7 +229,7 @@ func writeReports(formatsCSV, output, outputDir string, report reporters.Report)
 
 	fileFormats := 0
 	for _, f := range formats {
-		if f != "azdo" && f != "azure-devops" {
+		if _, streaming := streamingFormats[f]; !streaming {
 			fileFormats++
 		}
 	}
@@ -230,9 +238,9 @@ func writeReports(formatsCSV, output, outputDir string, report reporters.Report)
 	}
 
 	for _, f := range formats {
-		if f == "azdo" || f == "azure-devops" {
-			if err := reporters.WriteAzureDevOps(os.Stdout, report); err != nil {
-				return fmt.Errorf("writing azure devops output: %w", err)
+		if write, streaming := streamingFormats[f]; streaming {
+			if err := write(os.Stdout, report); err != nil {
+				return fmt.Errorf("writing %s output: %w", f, err)
 			}
 			continue
 		}
@@ -279,7 +287,7 @@ func writeFormat(format string, w io.Writer, report reporters.Report) error {
 	case "html":
 		return reporters.WriteHTML(w, report)
 	default:
-		return fmt.Errorf("unknown report format %q (want json|sarif|junit|html|azdo|console)", format)
+		return fmt.Errorf("unknown report format %q (want json|sarif|junit|html|azdo|github|console)", format)
 	}
 }
 

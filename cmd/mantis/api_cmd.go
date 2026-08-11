@@ -25,7 +25,7 @@ func cmdAPI(args []string) error {
 	target := fs.String("target", "", "target base URL")
 	openapiPath := fs.String("openapi", "", "path to OpenAPI/Swagger spec (required)")
 	failOn := fs.String("fail-on", "high", "minimum severity that fails the gate: critical|high|medium|low|any")
-	report := fs.String("report", "", "comma-separated report formats to write: json,sarif,junit,html,azdo")
+	report := fs.String("report", "", "comma-separated report formats to write: json,sarif,junit,html,azdo,github")
 	output := fs.String("output", "", "exact report output path (only when a single file-based --report format is given)")
 	outputDir := fs.String("output-dir", "", "directory for default-named report files when writing multiple formats (default: current directory)")
 	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification")

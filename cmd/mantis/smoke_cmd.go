@@ -18,7 +18,7 @@ func cmdSmoke(args []string) error {
 	envFile := fs.String("environments-file", "environments.yaml", "path to environments.yaml")
 	workflowsDir := fs.String("workflows-dir", "smoke", "directory of smoke workflow YAML files")
 	target := fs.String("target", "", "target base URL (overrides environment base_url)")
-	report := fs.String("report", "", "comma-separated report formats to write: json,sarif,junit,html,azdo")
+	report := fs.String("report", "", "comma-separated report formats to write: json,sarif,junit,html,azdo,github")
 	output := fs.String("output", "", "exact report output path (only when a single file-based --report format is given)")
 	outputDir := fs.String("output-dir", "", "directory for default-named report files when writing multiple formats (default: current directory)")
 	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification")
