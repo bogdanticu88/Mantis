@@ -2,6 +2,14 @@
   <img src="assets/banner.png" alt="Mantis - CI/CD Security Gate" width="100%">
 </p>
 
+<p align="center">
+  <a href="https://github.com/bogdanticu88/Mantis/actions/workflows/ci.yml"><img src="https://github.com/bogdanticu88/Mantis/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/bogdanticu88/Mantis/releases/latest"><img src="https://img.shields.io/github/v/release/bogdanticu88/Mantis" alt="Latest Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/bogdanticu88/Mantis" alt="License"></a>
+  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/bogdanticu88/Mantis" alt="Go Version"></a>
+  <a href="https://goreportcard.com/report/github.com/bogdanticu88/Mantis"><img src="https://goreportcard.com/badge/github.com/bogdanticu88/Mantis" alt="Go Report Card"></a>
+</p>
+
 # Mantis
 
 A template-driven DAST and application validation tool, built to run as a
