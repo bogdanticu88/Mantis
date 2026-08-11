@@ -98,6 +98,60 @@ func TestCmdDast_DiscoversAndReports(t *testing.T) {
 	}
 }
 
+// End-to-end proof of the double-gate at the actual CLI layer: an
+// environment's security_level: aggressive is not, by itself, enough to
+// make `mantis dast` submit forms - --destructive has to be passed on
+// this specific invocation too.
+func newDestructiveTestFormServer(t *testing.T) (*httptest.Server, *int) {
+	t.Helper()
+	var submitCount int
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><form method="POST" action="/submit"><input name="cmd"></form></body></html>`))
+	})
+	mux.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
+		submitCount++
+		w.Write([]byte("submitted"))
+	})
+	return httptest.NewServer(mux), &submitCount
+}
+
+func TestCmdDast_DestructiveRequiresExplicitFlagEvenUnderAggressivePolicy(t *testing.T) {
+	srv, submitCount := newDestructiveTestFormServer(t)
+	defer srv.Close()
+
+	dir := t.TempDir()
+	envFile := writeFile(t, dir, "environments.yaml", `
+environments:
+  dev:
+    base_url: `+srv.URL+`
+    security_level: aggressive
+`)
+	emptyTemplates := t.TempDir()
+
+	// No --destructive: the form must not be submitted, even though the
+	// environment's policy allows destructive testing in principle.
+	if err := cmdDast([]string{"--environment", "dev", "--environments-file", envFile, "--templates-dir", emptyTemplates, "--fail-on", "critical"}); err != nil {
+		if _, ok := err.(*gateFailure); !ok {
+			t.Fatalf("cmdDast: %v", err)
+		}
+	}
+	if *submitCount != 0 {
+		t.Fatalf("form was submitted %d time(s) without --destructive", *submitCount)
+	}
+
+	// With --destructive: now it should be.
+	if err := cmdDast([]string{"--environment", "dev", "--environments-file", envFile, "--templates-dir", emptyTemplates, "--fail-on", "critical", "--destructive"}); err != nil {
+		if _, ok := err.(*gateFailure); !ok {
+			t.Fatalf("cmdDast: %v", err)
+		}
+	}
+	if *submitCount == 0 {
+		t.Error("form was never submitted even with --destructive and an aggressive-policy environment")
+	}
+}
+
 func TestCmdSmoke_RunsWorkflowAndPasses(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -305,6 +359,49 @@ steps:
 	})
 	if err != nil {
 		t.Errorf("cmdValidate returned an error for a passing environment: %v", err)
+	}
+}
+
+// validate.go used to wire the API-scan portion's Destructive option
+// straight from policy.Destructive with no --destructive flag check at
+// all - this is the regression test for that fix, proven through the
+// actual cmdValidate entry point rather than by calling dast/api directly.
+func TestCmdValidate_DestructiveRequiresExplicitFlagEvenUnderAggressivePolicy(t *testing.T) {
+	srv, submitCount := newDestructiveTestFormServer(t)
+	defer srv.Close()
+
+	dir := t.TempDir()
+	envFile := writeFile(t, dir, "environments.yaml", `
+environments:
+  dev:
+    base_url: `+srv.URL+`
+    security_level: aggressive
+`)
+	emptyDir := t.TempDir()
+
+	run := func(extraArgs ...string) {
+		args := append([]string{
+			"--environment", "dev",
+			"--environments-file", envFile,
+			"--workflows-dir", emptyDir,
+			"--templates-dir", emptyDir,
+			"--fail-on", "critical",
+		}, extraArgs...)
+		if err := cmdValidate(args); err != nil {
+			if _, ok := err.(*gateFailure); !ok {
+				t.Fatalf("cmdValidate: %v", err)
+			}
+		}
+	}
+
+	run() // no --destructive
+	if *submitCount != 0 {
+		t.Fatalf("form was submitted %d time(s) via validate without --destructive", *submitCount)
+	}
+
+	run("--destructive")
+	if *submitCount == 0 {
+		t.Error("form was never submitted via validate even with --destructive and an aggressive-policy environment")
 	}
 }
 

@@ -26,6 +26,7 @@ func cmdDast(args []string) error {
 	outputDir := fs.String("output-dir", "", "directory for default-named report files when writing multiple formats (default: current directory)")
 	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification")
 	timeout := fs.Duration("timeout", 15*time.Second, "per-request timeout")
+	destructive := fs.Bool("destructive", false, "allow fuzzing non-GET form fields (real POST/PUT/PATCH submissions carrying injection payloads) - also requires the environment's policy to allow destructive testing")
 	flagArgs, positional := splitArgs(fs, args)
 	fs.Parse(flagArgs)
 
@@ -37,6 +38,11 @@ func cmdDast(args []string) error {
 	baseURL, policy, auth, appName, err := resolveTargetAndPolicy(*envFile, *environment, target)
 	if err != nil {
 		return err
+	}
+
+	destructiveAllowed := *destructive && policy.Destructive
+	if *destructive && !policy.Destructive {
+		fmt.Fprintln(os.Stderr, "mantis: --destructive requested but this environment's policy disallows it; running non-destructive checks only")
 	}
 
 	client, err := buildClient(policy, *insecure, *timeout, baseURL, nil, nil)
@@ -69,6 +75,7 @@ func cmdDast(args []string) error {
 		Templates:   tpls,
 		BaseVars:    baseVars,
 		Headers:     headers,
+		Destructive: destructiveAllowed,
 	})
 	if err != nil {
 		return err

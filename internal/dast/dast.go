@@ -23,6 +23,19 @@ type Options struct {
 	Templates   []*templates.Template
 	BaseVars    map[string]string
 	Headers     map[string]string // applied to crawl requests, e.g. resolved auth (authenticated crawling)
+
+	// Destructive must be true for non-GET form fields to get fuzzed (real
+	// POST/PUT/PATCH submissions carrying injection payloads - this creates
+	// real records/side effects in the target if it doesn't reject the
+	// input). This is deliberately a second, explicit gate on top of
+	// Policy.Destructive: an environment's security_level: aggressive
+	// authorizes destructive testing in principle, but doesn't by itself
+	// run it on any given invocation - the caller (cmd/mantis) only sets
+	// this when --destructive was passed on that specific command, the
+	// same double-gate api.Options.Destructive already used. One YAML line
+	// should never be enough, forever, to make every future `mantis
+	// validate` run start submitting forms.
+	Destructive bool
 }
 
 // Run does discovery (crawl + inline passive checks) and then, if the
@@ -33,7 +46,7 @@ type Options struct {
 // fuzzes every discovered query parameter (always, once ActiveDAST is
 // permitted - GET requests only, each independently retryable) and every
 // discovered form field (GET forms unconditionally, other methods only
-// when the policy also allows destructive testing).
+// when Destructive is set).
 func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, opts Options) (*Result, error) {
 	crawler := &Crawler{
 		Client:      client,
@@ -62,7 +75,7 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 	fuzzOpts := attacks.Options{
 		Environment: opts.Environment,
 		MaxRequests: opts.Policy.MaxRequests,
-		Destructive: opts.Policy.Destructive,
+		Destructive: opts.Destructive,
 	}
 	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzQueryParams(ctx, client, redactor, surface.URLs, fuzzOpts)...)
 

@@ -33,6 +33,7 @@ func cmdValidate(args []string) error {
 	outputDir := fs.String("output-dir", "", "directory for default-named report files when writing multiple formats (default: current directory)")
 	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification")
 	timeout := fs.Duration("timeout", 15*time.Second, "per-request timeout")
+	destructive := fs.Bool("destructive", false, "allow destructive testing (non-GET form fuzzing, state-changing API method probes) - also requires the environment's policy to allow it")
 	fs.Parse(args)
 
 	if *environment == "" {
@@ -42,6 +43,11 @@ func cmdValidate(args []string) error {
 	baseURL, policy, auth, appName, err := resolveTargetAndPolicy(*envFile, *environment, "")
 	if err != nil {
 		return err
+	}
+
+	destructiveAllowed := *destructive && policy.Destructive
+	if *destructive && !policy.Destructive {
+		fmt.Fprintln(os.Stderr, "mantis: --destructive requested but this environment's policy disallows it; running non-destructive checks only")
 	}
 
 	client, err := buildClient(policy, *insecure, *timeout, baseURL, nil, nil)
@@ -96,6 +102,7 @@ func cmdValidate(args []string) error {
 		Templates:   tpls,
 		BaseVars:    baseVars,
 		Headers:     headers,
+		Destructive: destructiveAllowed,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "mantis: dast: %v\n", err)
@@ -113,7 +120,7 @@ func cmdValidate(args []string) error {
 				Target:      baseURL,
 				Environment: *environment,
 				AuthHeaders: headers,
-				Destructive: policy.Destructive,
+				Destructive: destructiveAllowed,
 			})
 			allFindings = append(allFindings, apiFindings...)
 		}
