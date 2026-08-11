@@ -45,17 +45,14 @@ templates ship in `templates-community/` (see `mantis templates list`).
 
 A crawler with inline passive checks (missing security headers, insecure
 cookies, CORS misconfiguration, server version disclosure, directory
-listing) running against every page it fetches, followed by active testing:
-the loaded template set against the target root, plus per-parameter fuzzing
-against every discovered query parameter and form field (`internal/attacks`)
-- SQL injection, reflected XSS, path traversal, server-side template
-injection, and OS command injection, each with 2-3 payloads picked for low
-false-positive signal (error strings, literal reflection, an arithmetic
-result unlikely to appear by accident, an echo marker) rather than
-blind/timing-based detection. Query parameters are always safe to fuzz
-(GET only); form fields using anything other than GET only get fuzzed when
-the environment policy allows destructive testing. Bounded by the same
-`max_requests` the crawler uses, so it can't run away on a large site.
+listing) running against every page it fetches, followed by active
+testing: the loaded template set against the target root, plus
+per-parameter fuzzing (SQL injection, XSS, path traversal, and a couple
+more classes) against every discovered query parameter - always GET-only
+and safe to retry. Fuzzing can optionally extend to form submissions too,
+but that's opt-in and explained in
+[Environment policy and destructive testing](#environment-policy-and-destructive-testing)
+below, not something that happens by default.
 
 ### Smoke testing
 
@@ -80,18 +77,13 @@ guess, because the test fixtures tell Mantis exactly who owns what.
 
 ### Environment-aware policy
 
-Environments resolve to a security level - `aggressive`, `standard`, or
-`passive` - that controls what's actually allowed to run:
-
-| Level      | Smoke | Passive DAST | Active DAST | Destructive |
-| ---------- | :---: | :-----------: | :----------: | :---------: |
-| aggressive |  Yes  |      Yes      |     Yes      |     Yes     |
-| standard   |  Yes  |      Yes      |     Yes      |      No     |
-| passive    |  Yes  |      Yes      |      No      |      No     |
-
-Any environment name that isn't found, or has no recognized
-`security_level`, resolves to `passive` - the safest policy. A typo in an
-environment name should never grant more access than intended.
+Environments resolve to a security level (`aggressive`/`standard`/`passive`)
+that controls how deep testing goes - crawl depth, rate limits, whether
+active testing runs at all. Any environment name that isn't found, or has
+no recognized `security_level`, resolves to `passive`, the safest policy -
+a typo should never grant more access than intended. Full details,
+including the double opt-in required for anything destructive, are in
+[Environment policy and destructive testing](#environment-policy-and-destructive-testing).
 
 ### Security gate
 
@@ -249,8 +241,10 @@ mantis dast <target> --fail-on high
 Same idea, but it crawls first (discovers pages, forms, query
 parameters), layers passive checks (missing headers, insecure cookies,
 CORS) on every page it fetches, then runs the templates plus
-per-parameter fuzzing (SQLi/XSS/path traversal/SSTI/command injection)
-against everything it found.
+query-parameter fuzzing (SQLi/XSS/path traversal and more) against
+everything it found - this invocation alone never submits any form or
+touches anything destructive; that needs an explicit opt-in, see
+[Environment policy and destructive testing](#environment-policy-and-destructive-testing).
 
 ### 3. Write and run a smoke test
 
@@ -299,6 +293,87 @@ Every scan/dast/smoke/api/validate command accepts `--environment`,
 `--report` (comma-separated: `json,sarif,junit,html,azdo,github`),
 `--output`/`--output-dir`, `--insecure-skip-verify`, `--timeout`. Flags
 can go before or after the positional target.
+
+## Environment policy and destructive testing
+
+Everything above - scan, dast, smoke, validate as shown in Getting
+started - only ever reads. It's safe to run against anything you're
+authorized to point it at. This section covers the one part of Mantis
+that isn't: destructive testing, which is opt-in, off by default, and
+worth understanding fully before you turn it on.
+
+### The policy table
+
+Environments resolve to a security level that controls how deep testing
+goes:
+
+| Level      | Smoke | Passive DAST | Active DAST | Destructive |
+| ---------- | :---: | :-----------: | :----------: | :---------: |
+| aggressive |  Yes  |      Yes      |     Yes      |    Yes\*    |
+| standard   |  Yes  |      Yes      |     Yes      |      No     |
+| passive    |  Yes  |      Yes      |      No      |      No     |
+
+\* Authorized in principle, not run automatically - see below.
+
+Any environment name that isn't found, or has no recognized
+`security_level`, resolves to `passive`, the safest policy. A typo in an
+environment name should never grant more access than intended.
+
+### What "Destructive" actually means
+
+Two mechanisms, both of which send real, state-changing requests against
+your target:
+
+- **API method-abuse probing** (`mantis api scan`) tries HTTP methods
+  your OpenAPI spec doesn't declare for a path - POST, PUT, PATCH,
+  DELETE - to see if the server accepts them anyway.
+- **Form fuzzing** (`mantis dast` / `mantis validate`) submits any non-GET
+  form the crawler finds, with an injection payload in one field at a
+  time. That's a real POST hitting real business logic - if the target
+  doesn't reject the malformed input, it creates an actual record (a
+  comment, an order, whatever the form does) containing the payload. The
+  payloads themselves are chosen to be low-impact (echo markers,
+  arithmetic markers, not `DROP TABLE`), but creating a real record is
+  still a real side effect, not a simulated one.
+
+Query-parameter fuzzing (covered in Getting started, step 2) is
+unaffected by any of this - it's GET-only, always safe, and runs
+whenever active testing is on regardless of the destructive setting.
+
+### Two gates, not one
+
+`security_level: aggressive` in `environments.yaml` **authorizes**
+destructive testing - it does not **run** it. `mantis api scan`, `mantis
+dast`, and `mantis validate` all additionally require an explicit
+`--destructive` flag on that specific invocation:
+
+```bash
+mantis validate --environment dev --destructive
+```
+
+Without `--destructive`, an `aggressive` environment still runs full
+crawl depth, every template, and query-parameter fuzzing - everything
+except the two destructive mechanisms above. One line in a config file
+is never enough, by itself, to make a future pipeline run start
+submitting forms; someone has to type the flag on the run that should.
+
+If you want full crawl/template/rate-limit depth without ever allowing
+destructive testing on a given environment - even if `--destructive` gets
+added to a pipeline step by mistake later - set `allow_destructive: false`
+explicitly, which overrides the level's default:
+
+```yaml
+environments:
+  test:
+    base_url: https://test.example.com
+    security_level: aggressive
+    allow_destructive: false
+```
+
+**Only turn this on against environments where creating throwaway
+records is genuinely fine.** Never against production. Think carefully
+before using it against a shared test environment other people's work
+depends on.
 
 ## Development setup
 
@@ -379,8 +454,6 @@ never reach a report or log line.
 
 - GraphQL support past a raw introspection template
 - WebSocket testing, browser-based/JS-driven crawling
-- Native GitHub/GitLab PR annotations (currently file-based SARIF/JUnit
-  only, alongside the native Azure DevOps reporter)
 
 ## License
 
