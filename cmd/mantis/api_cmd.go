@@ -106,7 +106,7 @@ func cmdAPI(args []string) error {
 	rpt.ExitCode = exitCode
 
 	reporters.WriteConsole(os.Stdout, rpt)
-	if err := writeReports(*report, *output, *outputDir, rpt); err != nil {
+	if err := writeReports(*report, *output, *outputDir, rpt, os.Stdout); err != nil {
 		return err
 	}
 	if !passed {

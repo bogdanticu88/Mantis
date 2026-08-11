@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"net/http"
@@ -113,7 +114,7 @@ func TestAuthVarsAndMergeVars(t *testing.T) {
 func TestWriteReports_SingleFormatUsesExactOutputPath(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "custom-name.json")
-	if err := writeReports("json", out, "", reporters.Report{}); err != nil {
+	if err := writeReports("json", out, "", reporters.Report{}, &bytes.Buffer{}); err != nil {
 		t.Fatalf("writeReports: %v", err)
 	}
 	if _, err := os.Stat(out); err != nil {
@@ -123,7 +124,7 @@ func TestWriteReports_SingleFormatUsesExactOutputPath(t *testing.T) {
 
 func TestWriteReports_MultipleFormatsUseConventionalNames(t *testing.T) {
 	dir := t.TempDir()
-	if err := writeReports("json,junit", "", dir, reporters.Report{}); err != nil {
+	if err := writeReports("json,junit", "", dir, reporters.Report{}, &bytes.Buffer{}); err != nil {
 		t.Fatalf("writeReports: %v", err)
 	}
 	for _, name := range []string{"mantis-report.json", "mantis-report.junit.xml"} {
@@ -133,9 +134,17 @@ func TestWriteReports_MultipleFormatsUseConventionalNames(t *testing.T) {
 	}
 }
 
+// Streaming formats (azdo, github) must never touch disk - they only mean
+// anything printed live to whatever CI console is watching the job. This
+// test captures that "console" as an in-memory buffer rather than the real
+// os.Stdout specifically because this test suite runs inside GitHub
+// Actions: printing real ::notice::/::error:: lines to the actual process
+// stdout would have them parsed as genuine workflow commands by the CI job
+// running the tests, not just asserted on in isolation.
 func TestWriteReports_AzdoNeverWritesAFile(t *testing.T) {
 	dir := t.TempDir()
-	if err := writeReports("azdo", "", dir, reporters.Report{GatePassed: true}); err != nil {
+	var stdout bytes.Buffer
+	if err := writeReports("azdo", "", dir, reporters.Report{GatePassed: true}, &stdout); err != nil {
 		t.Fatalf("writeReports: %v", err)
 	}
 	entries, err := os.ReadDir(dir)
@@ -145,11 +154,15 @@ func TestWriteReports_AzdoNeverWritesAFile(t *testing.T) {
 	if len(entries) != 0 {
 		t.Errorf("azdo format wrote %d file(s) to disk, want 0 (it must only ever go to stdout)", len(entries))
 	}
+	if !bytes.Contains(stdout.Bytes(), []byte("##vso[")) {
+		t.Error("expected azdo logging commands in the captured stdout")
+	}
 }
 
 func TestWriteReports_GitHubNeverWritesAFile(t *testing.T) {
 	dir := t.TempDir()
-	if err := writeReports("github", "", dir, reporters.Report{GatePassed: true}); err != nil {
+	var stdout bytes.Buffer
+	if err := writeReports("github", "", dir, reporters.Report{GatePassed: true}, &stdout); err != nil {
 		t.Fatalf("writeReports: %v", err)
 	}
 	entries, err := os.ReadDir(dir)
@@ -159,11 +172,14 @@ func TestWriteReports_GitHubNeverWritesAFile(t *testing.T) {
 	if len(entries) != 0 {
 		t.Errorf("github format wrote %d file(s) to disk, want 0 (it must only ever go to stdout)", len(entries))
 	}
+	if !bytes.Contains(stdout.Bytes(), []byte("::notice::")) {
+		t.Error("expected GitHub Actions workflow commands in the captured stdout")
+	}
 }
 
 func TestWriteReports_MixedStreamingAndFileFormats(t *testing.T) {
 	dir := t.TempDir()
-	if err := writeReports("junit,github,azdo", "", dir, reporters.Report{GatePassed: true}); err != nil {
+	if err := writeReports("junit,github,azdo", "", dir, reporters.Report{GatePassed: true}, &bytes.Buffer{}); err != nil {
 		t.Fatalf("writeReports: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "mantis-report.junit.xml")); err != nil {

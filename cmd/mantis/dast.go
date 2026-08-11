@@ -94,7 +94,7 @@ func cmdDast(args []string) error {
 
 	fmt.Fprintf(os.Stderr, "Discovered %d URLs, %d forms\n", len(result.Surface.URLs), len(result.Surface.Forms))
 	reporters.WriteConsole(os.Stdout, rpt)
-	if err := writeReports(*report, *output, *outputDir, rpt); err != nil {
+	if err := writeReports(*report, *output, *outputDir, rpt, os.Stdout); err != nil {
 		return err
 	}
 	if !passed {

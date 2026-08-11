@@ -215,7 +215,15 @@ var streamingFormats = map[string]func(io.Writer, reporters.Report) error{
 // means the current directory) - this is what lets a single command produce
 // a JUnit file for PublishTestResults@2 alongside a SARIF/HTML file for
 // artifact publishing, at predictable paths, in one scan.
-func writeReports(formatsCSV, output, outputDir string, report reporters.Report) error {
+//
+// stdout takes an explicit io.Writer (real callers pass os.Stdout) rather
+// than reaching for the global directly, specifically so tests can capture
+// it instead of writing real workflow commands to the actual process
+// stdout - which, the hard way, turns out to matter: this test suite runs
+// inside GitHub Actions, and a test that printed real ::notice::/::error::
+// lines to the real stdout would have them parsed as genuine workflow
+// commands by the very CI job running the test.
+func writeReports(formatsCSV, output, outputDir string, report reporters.Report, stdout io.Writer) error {
 	if formatsCSV == "" {
 		return nil
 	}
@@ -239,7 +247,7 @@ func writeReports(formatsCSV, output, outputDir string, report reporters.Report)
 
 	for _, f := range formats {
 		if write, streaming := streamingFormats[f]; streaming {
-			if err := write(os.Stdout, report); err != nil {
+			if err := write(stdout, report); err != nil {
 				return fmt.Errorf("writing %s output: %w", f, err)
 			}
 			continue
