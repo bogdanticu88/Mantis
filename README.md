@@ -8,6 +8,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/bogdanticu88/Mantis" alt="License"></a>
   <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/bogdanticu88/Mantis" alt="Go Version"></a>
   <a href="https://goreportcard.com/report/github.com/bogdanticu88/Mantis"><img src="https://goreportcard.com/badge/github.com/bogdanticu88/Mantis" alt="Go Report Card"></a>
+  <a href="https://github.com/bogdanticu88/Mantis/pkgs/container/mantis"><img src="https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white" alt="Docker Image"></a>
+  <a href="#what-problem-it-solves"><img src="https://img.shields.io/badge/detection-deterministic-informational" alt="Deterministic Detection"></a>
+  <a href="#environment-policy-and-destructive-testing"><img src="https://img.shields.io/badge/destructive%20testing-opt--in-yellow" alt="Destructive Testing: Opt-in"></a>
+  <a href="https://github.com/bogdanticu88/Mantis/blob/main/README.md#development-setup"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome"></a>
 </p>
 
 # Mantis
