@@ -164,3 +164,53 @@ environments:
 		t.Errorf("token = %q, want %q (left untouched)", got, want)
 	}
 }
+
+func TestLoad_IdentitiesExpandedAndResolved(t *testing.T) {
+	t.Setenv("MANTIS_USER_A_TOKEN", "token-a")
+	t.Setenv("MANTIS_USER_B_TOKEN", "token-b")
+	path := writeTempFile(t, `
+environments:
+  test:
+    base_url: https://test.example.com
+    security_level: aggressive
+    identities:
+      - name: userA
+        authentication:
+          type: bearer
+          token: ${MANTIS_USER_A_TOKEN}
+        owns:
+          account_id: "1001"
+      - name: userB
+        authentication:
+          type: bearer
+          token: ${MANTIS_USER_B_TOKEN}
+        owns:
+          account_id: "1002"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	ids := cfg.Environments["test"].Identities
+	if len(ids) != 2 {
+		t.Fatalf("got %d identities, want 2", len(ids))
+	}
+	if ids[0].Authentication.Token != "token-a" {
+		t.Errorf("userA token = %q, want expanded to token-a", ids[0].Authentication.Token)
+	}
+	if ids[1].Owns["account_id"] != "1002" {
+		t.Errorf("userB owns[account_id] = %q, want 1002", ids[1].Owns["account_id"])
+	}
+
+	res, err := Resolve(cfg, "test")
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if len(res.Identities) != 2 {
+		t.Fatalf("Resolve: got %d identities, want 2", len(res.Identities))
+	}
+	if res.Identities[0].Name != "userA" || res.Identities[1].Name != "userB" {
+		t.Errorf("Resolve: identity names = %q, %q", res.Identities[0].Name, res.Identities[1].Name)
+	}
+}

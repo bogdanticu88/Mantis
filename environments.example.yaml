@@ -9,6 +9,24 @@ environments:
   test:
     base_url: https://test.example.com
     security_level: aggressive
+    # Two identities turn `mantis api scan`'s BOLA check from a
+    # reduced-confidence heuristic into a real confirmation: userA's
+    # credentials requesting the account known to belong to userB (per
+    # `owns`) and getting a 200 back is proof, not a guess. `owns` keys
+    # must match the path parameter name in the OpenAPI spec.
+    identities:
+      - name: userA
+        authentication:
+          type: bearer
+          token: ${MANTIS_USER_A_TOKEN}
+        owns:
+          account_id: "1001"
+      - name: userB
+        authentication:
+          type: bearer
+          token: ${MANTIS_USER_B_TOKEN}
+        owns:
+          account_id: "1002"
 
   acceptance:
     base_url: https://acc.example.com

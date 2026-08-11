@@ -97,6 +97,30 @@ func resolveTargetAndPolicy(envFile, envName, target string) (baseURL string, po
 	return target, environments.PolicyFor("standard"), nil, "", nil
 }
 
+// resolveIdentities loads the named environment's configured identities,
+// used by the BOLA check to run for real instead of falling back to a
+// same-credentials heuristic. Any error (missing file, unknown
+// environment) just yields no identities - by the time this is called,
+// resolveTargetAndPolicy has already validated the environment and would
+// have reported the same failure, so there's nothing new to say here.
+func resolveIdentities(envFile, envName string) []environments.Identity {
+	if envName == "" {
+		return nil
+	}
+	if envFile == "" {
+		envFile = "environments.yaml"
+	}
+	cfg, err := environments.Load(envFile)
+	if err != nil {
+		return nil
+	}
+	res, err := environments.Resolve(cfg, envName)
+	if err != nil {
+		return nil
+	}
+	return res.Identities
+}
+
 func buildClient(policy environments.Policy, insecure bool, timeout time.Duration, target string, extraAllowed, denied []string) (*httpclient.Client, error) {
 	allowed := extraAllowed
 	if len(allowed) == 0 {

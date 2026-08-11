@@ -58,10 +58,17 @@ between workflows.
 ### API testing
 
 Point it at an OpenAPI 3 (or Swagger 2) spec and it generates checks for
-missing authentication, undeclared HTTP method acceptance, a BOLA heuristic
-(flagged at reduced confidence - it needs manual confirmation with a second
-user's credentials to actually prove broken object-level authorization),
-and sensitive-looking keys in response bodies.
+missing authentication, undeclared HTTP method acceptance, broken object
+level authorization, and sensitive-looking keys in response bodies.
+
+BOLA gets two modes depending on what auth is configured. With a single
+identity it's a heuristic: two different sample IDs both returning 200
+under the same credentials, flagged at reduced confidence since it doesn't
+actually prove anything. With two or more `identities` configured in
+`environments.yaml` (each with a known owned resource id via `owns`), it's
+a real check: identity A requesting a resource identity B is known to own,
+and getting a 200 back, is a confirmed finding at full confidence - not a
+guess, because the test fixtures tell Mantis exactly who owns what.
 
 ### Environment-aware policy
 
@@ -207,14 +214,18 @@ Every package has unit test coverage, including `cmd/mantis` itself (flag
 parsing, exit codes, command wiring - `main()` is split into a testable
 `dispatch()`/`exitCodeFor()` so tests don't need to shell out to a
 subprocess), the DAST crawler (scope enforcement, depth/request limits,
-form extraction), and the API package's generated checks (missing-auth,
-method-abuse, the BOLA heuristic, sensitive-data detection).
+form extraction), the fuzzing engine, and the API package's generated
+checks (missing-auth, method-abuse, both BOLA modes, sensitive-data
+detection).
 
 ## Configuration reference
 
 **`environments.yaml`** maps environment names to a base URL, a
 `security_level`, and optional authentication (`bearer`, `basic`, or
-`oauth2` client-credentials):
+`oauth2` client-credentials). An environment can also declare `identities`
+- a second set of credentials plus an `owns` map of resource ids, which is
+what turns the API BOLA check from a heuristic into a real one (see
+`environments.example.yaml` for a worked example):
 
 ```yaml
 application:
@@ -258,8 +269,6 @@ never reach a report or log line.
 
 - Environment drift detection - compare the same finding across
   dev/test/acc/prod and flag regressions introduced between environments
-- Multi-identity support (user A vs. user B) so the BOLA heuristic can
-  become a real check instead of a reduced-confidence candidate
 - Native GitHub Actions annotations / check runs (beyond SARIF upload)
 - More fuzzing payloads/classes (SSRF-via-parameter, XXE, NoSQL injection)
   once the current 5-class set has proven itself low-noise in practice

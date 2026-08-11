@@ -189,6 +189,69 @@ components:
 	}
 }
 
+// This is the end-to-end path for item 5 of the roadmap: identities
+// declared in environments.yaml should flow all the way through to a
+// confirmed (not heuristic) BOLA finding.
+func TestCmdAPI_ScanConfirmsBOLAFromEnvironmentIdentities(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK) // vulnerable: never checks resource ownership
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	specPath := writeFile(t, dir, "openapi.yaml", `
+openapi: 3.0.0
+info: {title: test, version: "1.0"}
+security:
+  - bearerAuth: []
+paths:
+  /accounts/{account_id}:
+    get:
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema: {type: string}
+      responses: {"200": {description: ok}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+`)
+	envFile := writeFile(t, dir, "environments.yaml", `
+environments:
+  test:
+    base_url: `+srv.URL+`
+    security_level: aggressive
+    identities:
+      - name: userA
+        authentication:
+          type: bearer
+          token: token-a
+        owns:
+          account_id: "1001"
+      - name: userB
+        authentication:
+          type: bearer
+          token: token-b
+        owns:
+          account_id: "1002"
+`)
+
+	err := cmdAPI([]string{
+		"scan",
+		"--environment", "test",
+		"--environments-file", envFile,
+		"--openapi", specPath,
+		"--fail-on", "any",
+	})
+	if err == nil {
+		t.Fatal("expected a confirmed BOLA finding to fail the gate")
+	}
+	if _, ok := err.(*gateFailure); !ok {
+		t.Errorf("error type = %T, want *gateFailure", err)
+	}
+}
+
 func TestCmdValidate_RequiresEnvironment(t *testing.T) {
 	if err := cmdValidate([]string{}); err == nil {
 		t.Error("cmdValidate with no --environment should return an error")

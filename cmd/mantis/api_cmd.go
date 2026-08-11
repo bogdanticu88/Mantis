@@ -61,6 +61,19 @@ func cmdAPI(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// A second (third, ...) identity turns the BOLA check from a heuristic
+	// into a real cross-identity confirmation - see environments.Identity.
+	var apiIdentities []api.Identity
+	for _, id := range resolveIdentities(*envFile, *environment) {
+		idHeaders, idSecrets, err := resolveAuth(ctx, client, id.Authentication)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "mantis: identity %q: %v\n", id.Name, err)
+			continue
+		}
+		secrets = append(secrets, idSecrets...)
+		apiIdentities = append(apiIdentities, api.Identity{Name: id.Name, Headers: idHeaders, Owns: id.Owns})
+	}
 	redactor := httpclient.NewRedactor(secrets...)
 
 	spec, err := api.ParseOpenAPI(*openapiPath)
@@ -75,6 +88,7 @@ func cmdAPI(args []string) error {
 		Target:      baseURL,
 		Environment: *environment,
 		AuthHeaders: headers,
+		Identities:  apiIdentities,
 		Destructive: destructiveAllowed,
 	})
 

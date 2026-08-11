@@ -35,10 +35,25 @@ func (a *AuthConfig) Secrets() []string {
 	return []string{a.Token, a.Password, a.ClientSecret}
 }
 
+// Identity is a second (third, ...) set of credentials for the same
+// environment, used to make the BOLA check a real cross-identity
+// confirmation instead of a same-credentials heuristic. Owns maps a path
+// parameter name (matching what's in the OpenAPI spec, e.g. "id" or
+// "account_id") to a resource id this identity is known to own - that
+// mapping is inherently test-fixture data only a human can provide, there's
+// no way to discover "which account belongs to which test user" from the
+// spec alone.
+type Identity struct {
+	Name           string            `yaml:"name"`
+	Authentication *AuthConfig       `yaml:"authentication,omitempty"`
+	Owns           map[string]string `yaml:"owns,omitempty"`
+}
+
 type EnvironmentConfig struct {
 	BaseURL          string      `yaml:"base_url"`
 	SecurityLevel    string      `yaml:"security_level"`
 	Authentication   *AuthConfig `yaml:"authentication,omitempty"`
+	Identities       []Identity  `yaml:"identities,omitempty"`
 	RateLimit        float64     `yaml:"rate_limit,omitempty"`
 	MaxConcurrency   int         `yaml:"max_concurrency,omitempty"`
 	MaxCrawlDepth    int         `yaml:"max_crawl_depth,omitempty"`
@@ -70,18 +85,27 @@ func Load(path string) (*Config, error) {
 	}
 	for name, env := range cfg.Environments {
 		env.BaseURL = expandEnv(env.BaseURL)
-		if env.Authentication != nil {
-			a := *env.Authentication
-			a.Token = expandEnv(a.Token)
-			a.Username = expandEnv(a.Username)
-			a.Password = expandEnv(a.Password)
-			a.ClientID = expandEnv(a.ClientID)
-			a.ClientSecret = expandEnv(a.ClientSecret)
-			env.Authentication = &a
+		env.Authentication = expandAuth(env.Authentication)
+		for i, id := range env.Identities {
+			id.Authentication = expandAuth(id.Authentication)
+			env.Identities[i] = id
 		}
 		cfg.Environments[name] = env
 	}
 	return &cfg, nil
+}
+
+func expandAuth(a *AuthConfig) *AuthConfig {
+	if a == nil {
+		return nil
+	}
+	out := *a
+	out.Token = expandEnv(out.Token)
+	out.Username = expandEnv(out.Username)
+	out.Password = expandEnv(out.Password)
+	out.ClientID = expandEnv(out.ClientID)
+	out.ClientSecret = expandEnv(out.ClientSecret)
+	return &out
 }
 
 // Resolved is a fully resolved environment ready to drive an httpclient and
@@ -91,6 +115,7 @@ type Resolved struct {
 	BaseURL        string
 	Policy         Policy
 	Authentication *AuthConfig
+	Identities     []Identity
 	AllowedHosts   []string
 	DeniedHosts    []string
 }
@@ -131,6 +156,7 @@ func Resolve(cfg *Config, name string) (Resolved, error) {
 	r.BaseURL = env.BaseURL
 	r.Policy = policy
 	r.Authentication = env.Authentication
+	r.Identities = env.Identities
 	r.AllowedHosts = env.AllowedHosts
 	r.DeniedHosts = env.DeniedHosts
 	return r, nil

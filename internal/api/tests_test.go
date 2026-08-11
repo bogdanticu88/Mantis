@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"mantis/internal/httpclient"
@@ -150,6 +151,80 @@ func TestCheckBOLA_SkippedWithoutAuthHeaders(t *testing.T) {
 	for _, f := range fs {
 		if f.ID == "MANTIS-API-BOLA-CANDIDATE" {
 			t.Error("BOLA heuristic should not run at all without auth headers to test with")
+		}
+	}
+}
+
+func TestCheckBOLA_ConfirmedWithTwoIdentities(t *testing.T) {
+	// Vulnerable: never checks whether the caller actually owns the
+	// requested account - anyone authenticated gets a 200.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	spec := &Spec{Endpoints: []Endpoint{{
+		Path: "/accounts/{account_id}", Method: "GET", RequiresAuth: true,
+		Parameters: []Parameter{{Name: "account_id", In: "path"}},
+	}}}
+	opts := Options{
+		Target: srv.URL,
+		Identities: []Identity{
+			{Name: "userA", Headers: map[string]string{"Authorization": "Bearer token-a"}, Owns: map[string]string{"account_id": "1001"}},
+			{Name: "userB", Headers: map[string]string{"Authorization": "Bearer token-b"}, Owns: map[string]string{"account_id": "1002"}},
+		},
+	}
+	fs := Run(context.Background(), newTestClient(t), httpclient.NewRedactor(), spec, opts)
+
+	var confirmed, heuristic bool
+	for _, f := range fs {
+		if f.ID == "MANTIS-API-BOLA-CONFIRMED" {
+			confirmed = true
+			if f.Confidence != 1.0 {
+				t.Errorf("confirmed BOLA confidence = %v, want 1.0 (this is proven, not a guess)", f.Confidence)
+			}
+		}
+		if f.ID == "MANTIS-API-BOLA-CANDIDATE" {
+			heuristic = true
+		}
+	}
+	if !confirmed {
+		t.Error("expected a confirmed BOLA finding: userA's credentials reached userB's known account")
+	}
+	if heuristic {
+		t.Error("the heuristic check should not run at all once 2+ identities make a real check possible")
+	}
+}
+
+func TestCheckBOLA_NotConfirmedWhenAccessControlEnforced(t *testing.T) {
+	// Correctly implemented: only the owner's token can read their own account.
+	ownership := map[string]string{"1001": "Bearer token-a", "1002": "Bearer token-b"}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/accounts/")
+		if ownership[id] != r.Header.Get("Authorization") {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	spec := &Spec{Endpoints: []Endpoint{{
+		Path: "/accounts/{account_id}", Method: "GET", RequiresAuth: true,
+		Parameters: []Parameter{{Name: "account_id", In: "path"}},
+	}}}
+	opts := Options{
+		Target: srv.URL,
+		Identities: []Identity{
+			{Name: "userA", Headers: map[string]string{"Authorization": "Bearer token-a"}, Owns: map[string]string{"account_id": "1001"}},
+			{Name: "userB", Headers: map[string]string{"Authorization": "Bearer token-b"}, Owns: map[string]string{"account_id": "1002"}},
+		},
+	}
+	fs := Run(context.Background(), newTestClient(t), httpclient.NewRedactor(), spec, opts)
+
+	for _, f := range fs {
+		if f.ID == "MANTIS-API-BOLA-CONFIRMED" {
+			t.Errorf("got a confirmed BOLA finding against an app that correctly enforces ownership: %+v", f)
 		}
 	}
 }

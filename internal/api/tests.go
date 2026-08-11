@@ -16,11 +16,23 @@ import (
 var safeMethods = map[string]bool{"GET": true, "HEAD": true, "OPTIONS": true}
 var allMethods = []string{"GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"}
 
+// Identity is a set of credentials plus known resource ownership, used to
+// make the BOLA check a real cross-identity confirmation instead of a
+// same-credentials heuristic. Owns maps a path parameter name (matching
+// what's declared in the OpenAPI spec, e.g. "id" or "account_id") to a
+// resource id this identity is known to own.
+type Identity struct {
+	Name    string
+	Headers map[string]string
+	Owns    map[string]string
+}
+
 type Options struct {
 	Target      string
 	Environment string
 	AuthHeaders map[string]string // applied to "authenticated" probes; omitted entirely for the missing-auth probe
-	SampleIDs   [2]string         // two distinct sample values substituted into ID-like path params for the BOLA heuristic
+	Identities  []Identity        // 2+ identities makes checkBOLA a real check instead of a heuristic
+	SampleIDs   [2]string         // two distinct sample values substituted into ID-like path params for the BOLA heuristic (only used as a fallback)
 	Destructive bool              // permit probing with state-changing methods (POST/PUT/PATCH/DELETE)
 }
 
@@ -112,13 +124,70 @@ func checkMethodAbuse(ctx context.Context, client *httpclient.Client, redactor *
 	return out
 }
 
-// checkBOLA is a heuristic: it substitutes two different sample values into
-// an ID-like path parameter and flags endpoints where both authenticated
-// requests return 2xx. This does NOT prove object-level authorization is
-// broken (that requires two different user identities, one of whom must be
-// denied) - it flags candidates for manual verification, and is reported at
-// reduced confidence for exactly that reason.
+// checkBOLA confirms or heuristically flags Broken Object Level
+// Authorization, depending on what's available. With two or more
+// Identities configured, this is a real check: authenticate as identity A,
+// request a resource identity B is known to own (via Identity.Owns), and a
+// 200 is a confirmed finding, full stop - no heuristic involved, because we
+// know for a fact that resource isn't A's. Without at least two identities
+// it falls back to the old same-credentials heuristic.
 func checkBOLA(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, spec *Spec, opts Options) []findings.Finding {
+	if len(opts.Identities) >= 2 {
+		return checkBOLAConfirmed(ctx, client, redactor, spec, opts)
+	}
+	return checkBOLAHeuristic(ctx, client, redactor, spec, opts)
+}
+
+// checkBOLAConfirmed tries every ordered pair of identities against every
+// GET endpoint with an ID-like path parameter that at least one identity
+// declares ownership of. A 200 when identity A requests a resource
+// identity B owns is a confirmed finding.
+func checkBOLAConfirmed(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, spec *Spec, opts Options) []findings.Finding {
+	var out []findings.Finding
+	for _, ep := range spec.Endpoints {
+		if !ep.RequiresAuth || ep.Method != "GET" {
+			continue
+		}
+		paramName := idParamName(ep)
+		if paramName == "" {
+			continue
+		}
+
+		for _, requester := range opts.Identities {
+			for _, owner := range opts.Identities {
+				if requester.Name == owner.Name {
+					continue
+				}
+				ownedID, ok := owner.Owns[paramName]
+				if !ok {
+					continue
+				}
+				reqURL := templates.JoinURL(opts.Target, FillPath(ep.Path, ownedID))
+				resp, err := do(ctx, client, "GET", reqURL, requester.Headers)
+				if err != nil {
+					continue
+				}
+				if resp.StatusCode != 200 {
+					continue
+				}
+				f := mkAPIFinding("MANTIS-API-BOLA-CONFIRMED", "Confirmed Broken Object Level Authorization", findings.SeverityCritical,
+					opts.Target, ep.Path, ep.Method, opts.Environment,
+					fmt.Sprintf("%q accessed a resource (%s=%s) known to belong to %q, using %q's own credentials, and received 200.",
+						requester.Name, paramName, ownedID, owner.Name, requester.Name),
+					"CWE-639", "API1:2023-Broken Object Level Authorization", resp, redactor)
+				out = append(out, f)
+			}
+		}
+	}
+	return out
+}
+
+// checkBOLAHeuristic substitutes two different sample values into an
+// ID-like path parameter and flags endpoints where both authenticated
+// requests return 2xx. This does NOT prove object-level authorization is
+// broken - it flags candidates for manual verification, and is reported at
+// reduced confidence for exactly that reason.
+func checkBOLAHeuristic(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, spec *Spec, opts Options) []findings.Finding {
 	if len(opts.AuthHeaders) == 0 {
 		return nil
 	}
@@ -128,7 +197,7 @@ func checkBOLA(ctx context.Context, client *httpclient.Client, redactor *httpcli
 		if !ep.RequiresAuth || ep.Method != "GET" {
 			continue
 		}
-		if !hasIDParam(ep) {
+		if idParamName(ep) == "" {
 			continue
 		}
 
@@ -152,15 +221,23 @@ func checkBOLA(ctx context.Context, client *httpclient.Client, redactor *httpcli
 	return out
 }
 
-func hasIDParam(ep Endpoint) bool {
+// idParamName returns the ID-like path parameter name for ep (matching
+// what a caller's Identity.Owns map should use as a key), or "" if there
+// isn't one. Falls back to scanning the path template itself in case the
+// spec didn't declare the parameter explicitly.
+func idParamName(ep Endpoint) string {
 	for _, p := range ep.Parameters {
 		if p.In == "path" && IsIDLike(p.Name) {
-			return true
+			return p.Name
 		}
 	}
-	// fall back to scanning the path template itself in case the spec
-	// didn't declare the parameter explicitly.
-	return pathParamPattern.MatchString(ep.Path) && IsIDLike(strings.Trim(pathParamPattern.FindString(ep.Path), "{}"))
+	if pathParamPattern.MatchString(ep.Path) {
+		name := strings.Trim(pathParamPattern.FindString(ep.Path), "{}")
+		if IsIDLike(name) {
+			return name
+		}
+	}
+	return ""
 }
 
 var sensitiveKeyPattern = regexp.MustCompile(`(?i)^(password|secret|token|api_?key|ssn|social_security|credit_card|card_number|cvv)$`)
