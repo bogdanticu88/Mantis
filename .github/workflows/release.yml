@@ -44,9 +44,17 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
+          # Both forms get tagged - the bare version (matches `mantis
+          # version`'s own output, which goreleaser's {{.Version}} already
+          # strips the "v" from) and the exact git ref (matches the tag
+          # someone actually typed / the GitHub release page). Publishing
+          # only one of these means half of "docker pull ...:v0.1.0" or
+          # "docker pull ...:0.1.0" 404s depending on which convention the
+          # person reaches for - not worth the ambiguity.
           tags: |
             ghcr.io/bogdanticu88/mantis:latest
             ghcr.io/bogdanticu88/mantis:${{ steps.version.outputs.value }}
+            ghcr.io/bogdanticu88/mantis:${{ github.ref_name }}
           build-args: |
             VERSION=${{ steps.version.outputs.value }}
             COMMIT=${{ github.sha }}
