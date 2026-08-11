@@ -1,8 +1,8 @@
 module mantis
 
-go 1.26.4
+go 1.23.0
 
 require (
-	golang.org/x/net v0.57.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	golang.org/x/net v0.42.0
+	gopkg.in/yaml.v3 v3.0.1
 )

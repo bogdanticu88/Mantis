@@ -5,6 +5,17 @@ import (
 	"os"
 )
 
+// version, commit and date are set at build time via -ldflags, e.g.:
+//
+//	go build -ldflags "-X main.version=v0.2.0 -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" ./cmd/mantis
+//
+// Left at their defaults for a plain `go build`/`go run`.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -25,6 +36,9 @@ func main() {
 		err = cmdValidate(os.Args[2:])
 	case "templates":
 		err = cmdTemplates(os.Args[2:])
+	case "version", "-v", "--version":
+		fmt.Printf("mantis %s (commit %s, built %s)\n", version, commit, date)
+		return
 	case "-h", "--help", "help":
 		printUsage()
 		return
@@ -53,6 +67,7 @@ Usage:
   mantis api scan [flags]                OpenAPI-driven API security tests
   mantis validate [flags]                Smoke + DAST + API per environment policy, with a security gate
   mantis templates list|validate|test    Template management
+  mantis version                         Print version info
 
 Run 'mantis <command> -h' for flags on a specific command.
 `)

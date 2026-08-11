@@ -116,7 +116,7 @@ individually, fairly small problems.
 
 ## Requirements
 
-- Go 1.22+
+- Go 1.23+
 
 ## Quick start
 
