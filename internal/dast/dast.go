@@ -3,6 +3,7 @@ package dast
 import (
 	"context"
 
+	"mantis/internal/attacks"
 	"mantis/internal/environments"
 	"mantis/internal/findings"
 	"mantis/internal/httpclient"
@@ -28,11 +29,11 @@ type Options struct {
 // policy allows it, active testing on top. Passive-only environments just
 // stop after discovery - no active requests get sent at all.
 //
-// Right now active testing just runs the loaded templates against the
-// target root. It doesn't fuzz every discovered form field yet (that's a
-// real attack-module job, not something to bolt onto here), so what you get
-// today is whatever the config/exposure templates catch, which happen to be
-// root-relative anyway.
+// Active testing runs the loaded templates against the target root, then
+// fuzzes every discovered query parameter (always, once ActiveDAST is
+// permitted - GET requests only, each independently retryable) and every
+// discovered form field (GET forms unconditionally, other methods only
+// when the policy also allows destructive testing).
 func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, opts Options) (*Result, error) {
 	crawler := &Crawler{
 		Client:      client,
@@ -57,5 +58,19 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 		}
 		result.ActiveFindings = append(result.ActiveFindings, r.Findings...)
 	}
+
+	fuzzOpts := attacks.Options{
+		Environment: opts.Environment,
+		MaxRequests: opts.Policy.MaxRequests,
+		Destructive: opts.Policy.Destructive,
+	}
+	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzQueryParams(ctx, client, redactor, surface.URLs, fuzzOpts)...)
+
+	attackForms := make([]attacks.Form, len(surface.Forms))
+	for i, f := range surface.Forms {
+		attackForms[i] = attacks.Form{Action: f.Action, Method: f.Method, Inputs: f.Inputs}
+	}
+	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzForms(ctx, client, redactor, attackForms, fuzzOpts)...)
+
 	return result, nil
 }

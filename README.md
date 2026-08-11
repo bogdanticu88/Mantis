@@ -37,8 +37,17 @@ templates ship in `templates-community/` (see `mantis templates list`).
 
 A crawler with inline passive checks (missing security headers, insecure
 cookies, CORS misconfiguration, server version disclosure, directory
-listing) running against every page it fetches, followed by active testing
-against the target root using the loaded template set.
+listing) running against every page it fetches, followed by active testing:
+the loaded template set against the target root, plus per-parameter fuzzing
+against every discovered query parameter and form field (`internal/attacks`)
+- SQL injection, reflected XSS, path traversal, server-side template
+injection, and OS command injection, each with 2-3 payloads picked for low
+false-positive signal (error strings, literal reflection, an arithmetic
+result unlikely to appear by accident, an echo marker) rather than
+blind/timing-based detection. Query parameters are always safe to fuzz
+(GET only); form fields using anything other than GET only get fuzzed when
+the environment policy allows destructive testing. Bounded by the same
+`max_requests` the crawler uses, so it can't run away on a large site.
 
 ### Smoke testing
 
@@ -97,6 +106,7 @@ internal/
   dsl/                 the matcher/assertion expression language
   jsonpath/             minimal JSONPath used by matchers and extractors
   dast/                crawler + passive checks + active scan orchestration
+  attacks/              per-parameter fuzzing (sqli/xss/path-traversal/ssti/cmdi)
   smoke/               smoke workflow parsing and execution
   api/                 OpenAPI reader + generated API security checks
   environments/        environment profiles and security-level policy
@@ -248,11 +258,11 @@ never reach a report or log line.
 
 - Environment drift detection - compare the same finding across
   dev/test/acc/prod and flag regressions introduced between environments
-- Per-parameter fuzzing attack modules (SQLi/XSS/etc. across every
-  discovered form field), rather than relying on root-relative templates
 - Multi-identity support (user A vs. user B) so the BOLA heuristic can
   become a real check instead of a reduced-confidence candidate
 - Native GitHub Actions annotations / check runs (beyond SARIF upload)
+- More fuzzing payloads/classes (SSRF-via-parameter, XXE, NoSQL injection)
+  once the current 5-class set has proven itself low-noise in practice
 
 ### Later
 
