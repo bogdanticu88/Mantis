@@ -153,6 +153,35 @@ Every scan/dast/smoke/api/validate command accepts `--environment`,
 `--insecure-skip-verify`, `--timeout`. Flags can go before or after the
 positional target.
 
+## Releases and Docker
+
+Tagged releases (`vX.Y.Z`) are built by `.github/workflows/release.yml`
+via [goreleaser](https://goreleaser.com): binaries for
+linux/darwin/windows on amd64/arm64, each archive bundling the binary,
+`templates-community/`, `README.md` and `LICENSE`, plus a `checksums.txt`.
+`mantis version` reports the real tag, commit and build date - injected
+via `-ldflags`, the same mechanism goreleaser uses. The `.goreleaser.yml`
+config and the Dockerfile were both validated against the actual tools
+locally (a `goreleaser release --snapshot` run and a real `docker build`),
+not just written to spec.
+
+A Docker image is published to `ghcr.io/bogdanticu88/mantis` on every
+tagged release (linux/amd64 + linux/arm64), built from a distroless base
+with `templates-community/` baked in at `/app`, so the default relative
+paths work with no extra mounting:
+
+```bash
+docker run --rm ghcr.io/bogdanticu88/mantis:latest scan https://example.com --fail-on high
+```
+
+For an environments file or custom templates, mount them in and point the
+flags at the mounted path:
+
+```bash
+docker run --rm -v "$(pwd)":/data ghcr.io/bogdanticu88/mantis:latest \
+  validate --environment test --environments-file /data/environments.yaml
+```
+
 ## Development setup
 
 ```bash
@@ -164,12 +193,12 @@ make templates  # build, then validate every template in templates-community/
 make clean      # remove built binaries and stray report files
 ```
 
-The core logic packages (dsl, gate, jsonpath, findings, environments,
-templates, httpclient, the dast passive checks, smoke assertions, the
-OpenAPI reader, all five reporters) have unit test coverage. `cmd/mantis`
-itself, the API package's generated checks, and the DAST crawler are still
-only verified by running the CLI against a live target rather than by unit
-tests - the next gap worth closing.
+Every package has unit test coverage, including `cmd/mantis` itself (flag
+parsing, exit codes, command wiring - `main()` is split into a testable
+`dispatch()`/`exitCodeFor()` so tests don't need to shell out to a
+subprocess), the DAST crawler (scope enforcement, depth/request limits,
+form extraction), and the API package's generated checks (missing-auth,
+method-abuse, the BOLA heuristic, sensitive-data detection).
 
 ## Configuration reference
 
@@ -219,10 +248,11 @@ never reach a report or log line.
 
 - Environment drift detection - compare the same finding across
   dev/test/acc/prod and flag regressions introduced between environments
-- Unit tests for `cmd/mantis`, the API package's generated checks, and the
-  DAST crawler
 - Per-parameter fuzzing attack modules (SQLi/XSS/etc. across every
   discovered form field), rather than relying on root-relative templates
+- Multi-identity support (user A vs. user B) so the BOLA heuristic can
+  become a real check instead of a reduced-confidence candidate
+- Native GitHub Actions annotations / check runs (beyond SARIF upload)
 
 ### Later
 

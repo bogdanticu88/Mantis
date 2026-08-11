@@ -1,0 +1,8 @@
+.git
+.github
+assets
+ci
+*.md
+mantis
+mantis.exe
+mantis-report.*

@@ -1,5 +1,6 @@
 /mantis
 /mantis.exe
+/dist/
 
 mantis-report.*
 
