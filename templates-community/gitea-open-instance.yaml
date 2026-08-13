@@ -1,0 +1,42 @@
+id: gitea-open-instance
+info:
+  name: Gitea Open Instance Detection
+  severity: medium
+  tags: [gitea, detection, developer-tools, vcs, git, open-instance]
+  description: "Detects a Gitea instance with public registration or open repository browsing enabled. Open Gitea instances can expose source code, CI secrets, and internal tooling to unauthenticated users."
+  remediation: "Disable public registration (DISABLE_REGISTRATION=true), set REQUIRE_SIGNIN_VIEW=true, and restrict access to trusted networks."
+  cwe: "CWE-284"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /explore/repos
+      - /user/login
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Gitea", "gitea"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["Powered by Gitea", "gitea-version", "<meta[^>]+Gitea"]
+        part: body
+        condition: or
+
+  - method: GET
+    path: /explore/repos
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Explore", "repository", "Gitea"]
+        part: body
+        condition: and
+      - type: dsl
+        dsl: "!contains(body, 'sign in') || contains(body, 'explore')"

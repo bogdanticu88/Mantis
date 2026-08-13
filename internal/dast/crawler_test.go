@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 // pages is a tiny link graph used across the crawler tests:

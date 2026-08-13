@@ -1,0 +1,36 @@
+id: jwt-none-algorithm
+info:
+  name: JWT None Algorithm Accepted
+  severity: critical
+  tags: [jwt, auth-bypass, authentication, auth-jwt-misconfig]
+  description: "Tests whether the server accepts JWTs using alg:none, which requires no signature and allows arbitrary token forgery without knowing the secret key."
+  remediation: "Enforce an explicit algorithm allowlist (e.g., RS256 or HS256) in JWT validation. Reject any token with alg:none or an unexpected algorithm."
+  cwe: "CWE-347"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    paths:
+      - /api/user
+      - /api/me
+      - /api/profile
+      - /api/v1/user
+      - /api/v1/me
+      - /api/account
+      - /api/v1/profile
+    headers:
+      Authorization: "Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiYWRtaW4iOnRydWV9."
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 201]
+      - type: word
+        words: ["email", "username", "user_id", "userId", "account", "profile", "\"sub\""]
+        part: body
+        condition: or
+      - type: word
+        words: ["Unauthorized", "invalid token", "invalid_token", "expired", "signature"]
+        part: body
+        condition: or
+        negative: true

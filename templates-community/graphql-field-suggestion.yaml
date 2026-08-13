@@ -1,0 +1,30 @@
+id: graphql-field-suggestion
+info:
+  name: GraphQL Field Name Suggestion Leak
+  severity: low
+  tags: [graphql, api, information-disclosure, introspection, api-graphql-security]
+  description: "GraphQL engines with suggestion features respond to misspelled field names with 'Did you mean X?' hints, exposing valid field names without requiring full introspection access."
+  remediation: "Disable field suggestions in production by configuring the GraphQL server to suppress suggestion messages."
+  cwe: "CWE-200"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: POST
+    path: /graphql
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+    body: '{"query":"{ usr { id } }"}'
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "Did you mean"
+        part: body
+      - type: word
+        words:
+          - "errors"
+        part: body

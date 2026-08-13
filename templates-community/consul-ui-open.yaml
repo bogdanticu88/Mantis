@@ -1,0 +1,25 @@
+id: consul-ui-open
+info:
+  name: HashiCorp Consul API Accessible Without ACL Enforcement
+  severity: medium
+  tags: [consul, hashicorp, service-mesh, devops, detection, open-instance, no-auth]
+  description: "HashiCorp Consul service catalog API responds without ACL enforcement. An unauthenticated attacker can read the full service topology, key-value store contents, and node metadata."
+  remediation: "Enable Consul ACLs with 'acl.enabled = true' and 'acl.default_policy = deny'. Restrict API and UI access to internal networks."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /v1/catalog/services
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["consul"]
+        part: body
+      - type: word
+        words: ["application/json"]
+        part: header
+      - type: dsl
+        dsl: "content_length > 5"

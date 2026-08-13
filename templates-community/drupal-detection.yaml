@@ -1,0 +1,20 @@
+id: drupal-detection
+info:
+  name: Drupal Installation Detected
+  severity: info
+  tags: [tech, fingerprint, drupal, cms]
+  description: "Drupal is running on this host. Knowing the CMS version enables targeted CVE scanning, particularly for Drupalgeddon-class vulnerabilities."
+  remediation: "Keep Drupal core and modules current. Apply security advisories from drupal.org/security promptly."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /user/login
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Drupal", "drupal", "sites/default"]
+        condition: or

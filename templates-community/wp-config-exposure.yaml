@@ -1,0 +1,31 @@
+id: wp-config-exposure
+info:
+  name: "WordPress wp-config.php Exposure"
+  severity: critical
+  tags: [wordpress, cms, config, credentials, exposure, config-file-exposures]
+  description: "Detects exposed WordPress configuration files containing database credentials, authentication keys, and salts. Exposure gives an attacker full database access."
+  remediation: "Move wp-config.php one directory above the web root. Restrict access via web server rules and rotate any exposed database credentials immediately."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /wp-config.php
+      - /wp-config.php.bak
+      - /wp-config.php.old
+      - /wp-config.bak
+      - /backup/wp-config.php
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "DB_NAME"
+          - "DB_PASSWORD"
+          - "DB_USER"
+          - "DB_HOST"
+        part: body
+        condition: or

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 func newTestClient(t *testing.T) *httpclient.Client {

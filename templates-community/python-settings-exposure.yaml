@@ -1,0 +1,30 @@
+id: python-settings-exposure
+info:
+  name: "Python/Django Settings File Exposure"
+  severity: high
+  tags: [python, django, config, credentials, exposure, config-file-exposures]
+  description: "Detects publicly accessible Django settings.py files that may expose SECRET_KEY, database credentials, ALLOWED_HOSTS, and other security-critical configuration."
+  remediation: "Block web server access to .py files globally. Externalize all secrets via environment variables or a dedicated secrets manager such as HashiCorp Vault."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /settings.py
+      - /config/settings.py
+      - /app/settings.py
+      - /myapp/settings.py
+      - /core/settings.py
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "SECRET_KEY"
+          - "DATABASES"
+          - "ALLOWED_HOSTS"
+        part: body
+        condition: or

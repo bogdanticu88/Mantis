@@ -1,0 +1,20 @@
+id: kubernetes-api-open
+info:
+  name: Kubernetes API Server Accessible Without Authentication
+  severity: critical
+  tags: [exposure, kubernetes, auth, cloud]
+  description: "The Kubernetes API server responds to unauthenticated requests. An attacker can enumerate namespaces, workloads, and secrets, and may be able to schedule malicious pods or exfiltrate cluster credentials."
+  remediation: "Disable anonymous access (--anonymous-auth=false). Apply RBAC policies that deny all unauthenticated access. Do not expose the API server on a public interface."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /api/v1/namespaces
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["namespaces", "\"kind\":\"NamespaceList\""]
+        condition: or

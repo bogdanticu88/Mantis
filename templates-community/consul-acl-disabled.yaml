@@ -1,0 +1,24 @@
+id: consul-acl-disabled
+info:
+  name: "Consul ACL Disabled - Unauthenticated Service Catalog Access"
+  severity: high
+  tags: [consul, hashicorp, default-credentials-extended, misconfig, service-discovery]
+  description: "Consul's ACL system is disabled or set to legacy mode, allowing unauthenticated read access to the full service catalog, KV store, and node data."
+  remediation: "Enable Consul ACLs with acl.default_policy = deny in consul.hcl. Issue minimal-scope tokens for each service consumer. Rotate the initial management token."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /v1/catalog/services
+      - /v1/catalog/nodes
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["X-Consul-Index"]
+        part: header
+      - type: dsl
+        dsl: "content_length > 5"

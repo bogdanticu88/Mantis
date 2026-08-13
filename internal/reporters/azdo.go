@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 // WriteAzureDevOps emits Azure Pipelines logging commands

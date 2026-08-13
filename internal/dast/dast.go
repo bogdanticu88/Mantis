@@ -3,11 +3,11 @@ package dast
 import (
 	"context"
 
-	"mantis/internal/attacks"
-	"mantis/internal/environments"
-	"mantis/internal/findings"
-	"mantis/internal/httpclient"
-	"mantis/internal/templates"
+	"github.com/bogdanticu88/Mantis/internal/attacks"
+	"github.com/bogdanticu88/Mantis/internal/environments"
+	"github.com/bogdanticu88/Mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/templates"
 )
 
 type Result struct {

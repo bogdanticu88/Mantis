@@ -1,0 +1,31 @@
+id: phpmyadmin-panel
+info:
+  name: phpMyAdmin Login Panel Exposed
+  severity: medium
+  tags: [phpmyadmin, mysql, database, admin-panel, network-admin-panels]
+  description: "phpMyAdmin database management login interface is publicly reachable. Internet-exposed database admin panels are prime targets for credential brute-force and known CVE exploitation."
+  remediation: "Place phpMyAdmin behind an IP allowlist or VPN. Remove it from public-facing web roots. Enforce strong credentials and keep the software patched."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /phpmyadmin/
+      - /phpmyadmin/index.php
+      - /pma/
+      - /pma/index.php
+      - /mysql/
+      - /mysqladmin/
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["phpMyAdmin", "pma_username", "pma_password"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 512"

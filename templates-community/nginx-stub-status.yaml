@@ -1,0 +1,24 @@
+id: nginx-stub-status
+info:
+  name: Nginx Stub Status Page Exposed
+  severity: info
+  tags: [nginx, detection, web-server-framework-detection, information-disclosure]
+  description: "The Nginx ngx_http_stub_status_module exposes basic server statistics including active connections and cumulative request counts. Externally reachable status pages confirm Nginx is deployed and enable server fingerprinting."
+  remediation: "Restrict the stub_status location block to 127.0.0.1 or a private management interface using allow/deny directives."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /nginx_status
+      - /stub_status
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['Active connections:', 'server accepts handled requests']
+        part: body
+        condition: or

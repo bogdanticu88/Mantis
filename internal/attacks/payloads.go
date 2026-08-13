@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 // Payload is one probe value plus how to recognize it worked.

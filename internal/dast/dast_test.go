@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"mantis/internal/environments"
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/environments"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 func TestRun_FuzzingSurfacesThroughActiveFindings(t *testing.T) {

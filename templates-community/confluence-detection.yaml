@@ -1,0 +1,20 @@
+id: confluence-detection
+info:
+  name: Atlassian Confluence Detected
+  severity: info
+  tags: [tech, fingerprint, confluence, atlassian]
+  description: "An Atlassian Confluence instance is accessible. Confluence has been targeted by critical RCE vulnerabilities (CVE-2022-26134, CVE-2023-22518)."
+  remediation: "Keep Confluence patched. Restrict internet-facing access and disable public signup if not required."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /login.action
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Confluence", "confluence", "Atlassian"]
+        condition: or

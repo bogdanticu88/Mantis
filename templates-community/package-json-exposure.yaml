@@ -1,0 +1,26 @@
+id: package-json-exposure
+info:
+  name: package.json Dependency File Exposure
+  severity: medium
+  tags: [nodejs, npm, dependencies, exposure, supply-chain, miscellaneous-security]
+  description: "package.json is publicly accessible, revealing Node.js dependency names, pinned versions, and npm scripts. This aids in targeting known-vulnerable package versions and understanding the application stack."
+  remediation: "Configure the web server to deny access to package.json. The file should never reside inside a publicly served directory in production."
+  cwe: "CWE-538"
+  owasp: "A06:2021-Vulnerable and Outdated Components"
+
+requests:
+  - method: GET
+    path: /package.json
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["dependencies"]
+        part: body
+      - type: regex
+        regex:
+          - '"dependencies"\s*:\s*\{'
+          - '"devDependencies"\s*:\s*\{'
+        part: body
+        condition: or

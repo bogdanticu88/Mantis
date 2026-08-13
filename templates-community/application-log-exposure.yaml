@@ -1,0 +1,36 @@
+id: application-log-exposure
+info:
+  name: General Application Log File Exposure
+  severity: medium
+  tags: [log-exposure, misconfiguration, recon, generic]
+  description: "Detects generic application log files exposed in common locations. Exposed logs can reveal error details, stack traces, internal paths, and user activity."
+  remediation: "Store log files outside the web root. Implement server-level access controls to deny requests matching *.log and *_log path patterns."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /app.log
+      - /application.log
+      - /server.log
+      - /service.log
+      - /system.log
+      - /logs/app.log
+      - /logs/application.log
+      - /logs/server.log
+      - /var/log/app.log
+      - /tmp/app.log
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}"
+          - "(ERROR|WARN|FATAL|CRITICAL|Exception|Traceback|Stack trace)"
+        part: body
+        condition: and
+      - type: dsl
+        dsl: "content_length > 64"

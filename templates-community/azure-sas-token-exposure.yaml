@@ -1,0 +1,30 @@
+id: azure-sas-token-exposure
+info:
+  name: Azure SAS Token Exposed in HTTP Response
+  severity: high
+  tags: [cloud, azure, sas, credentials, storage, cloud-infrastructure]
+  description: "An Azure Shared Access Signature token was found in an HTTP response. SAS tokens grant time-limited read or write access to Azure Storage resources and may allow data exfiltration or tampering."
+  remediation: "Revoke the SAS token by rotating the storage account keys or invalidating the stored access policy. Avoid returning SAS tokens in API responses; generate them server-side per-request with minimal permissions and short TTLs."
+  cwe: "CWE-312"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /.env
+      - /config
+      - /api/config
+      - /storage
+      - /files
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex: ["sv=20[0-9]{2}-[0-9]{2}-[0-9]{2}"]
+        part: body
+      - type: word
+        words: ["blob.core.windows.net", "queue.core.windows.net", "file.core.windows.net", "table.core.windows.net"]
+        part: body
+        condition: or

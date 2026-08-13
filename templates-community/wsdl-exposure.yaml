@@ -1,0 +1,39 @@
+id: wsdl-exposure
+info:
+  name: WSDL Service Description Exposed
+  severity: medium
+  tags: [wsdl, soap, api, information-disclosure, api-graphql-security]
+  description: "WSDL files expose the full contract of a SOAP web service including operations, message formats, and endpoint URLs. Publicly accessible WSDL files assist attackers in crafting targeted requests."
+  remediation: "Restrict WSDL access to authenticated clients or internal networks. Remove WSDL endpoints from public-facing services if not required."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /service?wsdl
+      - /api?wsdl
+      - /?wsdl
+      - /ws?wsdl
+      - /webservice?wsdl
+      - /soap?wsdl
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "wsdl:definitions"
+          - "definitions xmlns"
+          - "wsdl:types"
+          - "xs:schema"
+          - "xsd:schema"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "wsdl"
+          - "soap"
+        part: header
+        condition: or

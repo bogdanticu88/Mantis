@@ -1,0 +1,29 @@
+id: oauth-redirect-uri-open
+info:
+  name: OAuth Authorization Endpoint Accepts Open Redirect URI
+  severity: high
+  tags: [oauth, open-redirect, authentication, token-theft, auth-jwt-misconfig]
+  description: "Tests whether OAuth authorization endpoints accept unregistered redirect_uri values. A permissive server will redirect the authorization code or token to the attacker-controlled domain."
+  remediation: "Enforce a strict server-side allowlist of registered redirect URIs. Reject any authorization request with a redirect_uri not exactly matching a registered value."
+  cwe: "CWE-601"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - "/oauth/authorize?response_type=code&client_id=test&redirect_uri=https://evil.com"
+      - "/oauth2/authorize?response_type=code&client_id=test&redirect_uri=https://evil.com"
+      - "/auth/oauth/authorize?response_type=code&client_id=test&redirect_uri=https://evil.com"
+      - "/api/oauth/authorize?response_type=code&client_id=test&redirect_uri=https://evil.com"
+      - "/connect/authorize?response_type=code&client_id=test&redirect_uri=https://evil.com"
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex: ["(?i)location:\\s*https://evil\\.com"]
+        part: header
+      - type: word
+        words: ["https://evil.com"]
+        part: body
+      - type: dsl
+        dsl: "starts_with(to_lower(headers), 'location: https://evil.com')"

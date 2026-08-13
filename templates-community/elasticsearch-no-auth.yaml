@@ -1,0 +1,20 @@
+id: elasticsearch-no-auth
+info:
+  name: Elasticsearch Accessible Without Authentication
+  severity: critical
+  tags: [exposure, elasticsearch, auth, database]
+  description: "The Elasticsearch cluster API is reachable without credentials. An unauthenticated attacker can read all indices, exfiltrate data, and modify or delete records."
+  remediation: "Enable Elasticsearch security (xpack.security.enabled: true). Bind to localhost or a private interface, and place a reverse proxy with authentication in front of any externally reachable node."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /_cluster/health
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["cluster_name", "\"status\""]
+        condition: and

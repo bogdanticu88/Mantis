@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 func fakeResp(status int, body string) *httpclient.Response {

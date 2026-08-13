@@ -1,0 +1,48 @@
+id: api-debug-header
+info:
+  name: API Debug Header Information Leak
+  severity: medium
+  tags: [api, debug, information-disclosure, headers, api-graphql-security]
+  description: "Some APIs and frameworks expose internal debug information when a debug-enabling header is present. This can reveal stack traces, configuration values, database queries, or internal routing details."
+  remediation: "Strip or ignore debug-enabling headers in production. Debug modes must only be activatable through server-side configuration, not client-supplied headers."
+  cwe: "CWE-215"
+  owasp: "A05:2021-Security Misconfiguration"
+
+payloads:
+  debug_header:
+    - "X-Debug: 1"
+    - "Debug: true"
+    - "X-Debug-Mode: 1"
+    - "X-Enable-Debug: true"
+
+requests:
+  - method: GET
+    paths:
+      - /api/
+      - /api/v1/
+      - /api/health
+    headers:
+      X-Debug: "1"
+      Accept: "application/json"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "debug"
+          - "stack_trace"
+          - "stackTrace"
+          - "query_log"
+          - "sql_query"
+          - "backtrace"
+          - "debug_mode"
+          - "DEBUG"
+        part: body
+        condition: or
+      - type: regex
+        regex:
+          - "\"debug\"\\s*:\\s*true"
+          - "\"debug_info\"\\s*:"
+          - "\"queries\"\\s*:\\s*\\["
+        part: body
+        condition: or

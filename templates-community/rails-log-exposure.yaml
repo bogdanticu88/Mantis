@@ -1,0 +1,34 @@
+id: rails-log-exposure
+info:
+  name: Ruby on Rails Log File Exposure
+  severity: high
+  tags: [rails, ruby, log-exposure, framework, misconfiguration]
+  description: "Detects publicly accessible Ruby on Rails log files under /log/. Rails logs contain full request details, SQL queries, render times, and exception backtraces that expose application internals."
+  remediation: "The Rails /log directory must not sit under /public. Confirm config/application.rb log path is outside the web root and that the web server denies /log/* requests."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /log/development.log
+      - /log/production.log
+      - /log/staging.log
+      - /log/test.log
+      - /logs/production.log
+      - /logs/development.log
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "Started (GET|POST|PUT|PATCH|DELETE) \"/"
+          - "Completed \\d{3} [A-Za-z]+ in \\d+ms"
+          - "Processing by [A-Za-z:]+#[a-z_]+ as"
+          - "ActiveRecord::"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 64"

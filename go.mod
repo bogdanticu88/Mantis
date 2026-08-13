@@ -1,4 +1,4 @@
-module mantis
+module github.com/bogdanticu88/Mantis
 
 go 1.23.0
 

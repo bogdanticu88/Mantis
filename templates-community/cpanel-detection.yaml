@@ -1,0 +1,28 @@
+id: cpanel-detection
+info:
+  name: cPanel Hosting Control Panel Exposed
+  severity: medium
+  tags: [cpanel, hosting, admin-panel, network-admin-panels, whm]
+  description: "cPanel web hosting control panel login is publicly reachable (typically ports 2082 HTTP and 2083 HTTPS). Provides full hosting management including file manager, databases, email, and shell access."
+  remediation: "Restrict cPanel and WHM ports to administrator IPs via firewall. Enable Host Access Control in cPanel. Expose the panel only over VPN for managed environments."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /cpanel
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["cPanel"]
+        part: body
+      - type: word
+        words: ["cPanel Login", "Powered by cPanel", "login_theme", "goto_uri"]
+        part: body
+        condition: or

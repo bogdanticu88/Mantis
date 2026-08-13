@@ -1,0 +1,26 @@
+id: nexus-repository-detection
+info:
+  name: Sonatype Nexus Repository Manager Login Panel Detected
+  severity: info
+  tags: [nexus, sonatype, repository, devops, detection, login-panel, artifact-management]
+  description: "Sonatype Nexus Repository Manager login page is publicly accessible. Nexus manages software artifacts including Maven, npm, Docker, and Helm packages. Its exposure reveals artifact management infrastructure."
+  remediation: "Restrict Nexus access to authorized build systems and developers using network controls. Disable anonymous access unless explicitly required."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /nexus/
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Nexus Repository Manager", "Sonatype Nexus"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 500"

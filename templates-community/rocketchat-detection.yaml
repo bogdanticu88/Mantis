@@ -1,0 +1,48 @@
+id: rocketchat-detection
+info:
+  name: Rocket.Chat Instance Detection
+  severity: info
+  tags: [rocketchat, detection, developer-tools, messaging, collaboration]
+  description: "Detects an exposed Rocket.Chat instance. Rocket.Chat is a self-hosted team communication platform. Open registration or guest access can expose internal channels and communications."
+  remediation: "Disable open registration, restrict guest access, enable 2FA, and place behind a VPN or IP allowlist."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /home
+      - /login
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Rocket.Chat", "rocketchat"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["rc-room", "rocket\\.chat", "Rocket\\.Chat__layout", "meteor\\.js"]
+        part: body
+        condition: or
+
+  - method: GET
+    path: /api/v1/info
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["version", "success"]
+        part: body
+        condition: and
+      - type: regex
+        regex: ["\"success\":\\s*true", "\"version\":\\s*\"[0-9]"]
+        part: body
+        condition: and
+    extractors:
+      - type: json
+        name: rocketchat_version
+        path: "$.info.version"

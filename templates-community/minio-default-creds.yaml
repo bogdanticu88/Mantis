@@ -1,0 +1,32 @@
+id: minio-default-creds
+info:
+  name: "MinIO Console Default Credentials (minioadmin:minioadmin)"
+  severity: critical
+  tags: [minio, object-storage, default-credentials-extended, default-creds, s3]
+  description: "MinIO Console accepts the factory-default minioadmin:minioadmin credentials, granting full administrative access to all buckets, objects, and IAM policies."
+  remediation: "Rotate root credentials immediately via MINIO_ROOT_USER and MINIO_ROOT_PASSWORD environment variables. Enable TLS. Audit all bucket policies and access keys."
+  cwe: "CWE-798"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: GET
+    path: /minio/health/live
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+  - method: POST
+    path: /api/v1/login
+    headers:
+      Content-Type: "application/json"
+    body: '{"accessKey":"minioadmin","secretKey":"minioadmin"}'
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 201]
+      - type: word
+        words: ["sessionId"]
+        part: body
+      - type: dsl
+        dsl: "content_length > 20"

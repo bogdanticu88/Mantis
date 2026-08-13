@@ -1,0 +1,29 @@
+id: terraform-state-exposure
+info:
+  name: Terraform State File Publicly Accessible
+  severity: high
+  tags: [cloud, terraform, iac, secrets, misconfiguration, cloud-infrastructure]
+  description: "A Terraform state file is accessible without authentication. State files contain the full infrastructure resource graph including database passwords, API keys, TLS private keys, and sensitive output values."
+  remediation: "Store Terraform state in a remote backend with strict access controls such as S3 with bucket policies and DynamoDB locking, or Terraform Cloud. Never serve .tfstate files via HTTP or commit them to version control."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /terraform.tfstate
+      - /.terraform/terraform.tfstate
+      - /infrastructure/terraform.tfstate
+      - /infra/terraform.tfstate
+      - /deploy/terraform.tfstate
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["terraform_version"]
+        part: body
+      - type: word
+        words: ["resources", "outputs"]
+        part: body
+        condition: or

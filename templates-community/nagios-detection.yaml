@@ -1,0 +1,28 @@
+id: nagios-detection
+info:
+  name: Nagios Network Monitoring Login Page Detected
+  severity: info
+  tags: [nagios, monitoring, devops, detection, login-panel]
+  description: "Nagios network monitoring platform login page is publicly accessible. Nagios monitors network services and hosts; its exposure reveals infrastructure monitoring topology and may disclose host inventory."
+  remediation: "Restrict Nagios to authorized networks using Apache IP-based access controls or network-level filtering. Require VPN for remote access."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /nagios/
+      - /nagios4/
+      - /nagiosxi/
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Nagios"]
+        part: body
+      - type: word
+        words: ["nagios", "monitoring", "login", "password"]
+        part: body
+        condition: or

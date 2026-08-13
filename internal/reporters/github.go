@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 // WriteGitHubActions emits GitHub Actions workflow commands

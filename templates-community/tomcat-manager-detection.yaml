@@ -1,0 +1,24 @@
+id: tomcat-manager-detection
+info:
+  name: Apache Tomcat Manager Application Exposed
+  severity: high
+  tags: [tomcat, apache, java, detection, web-server-framework-detection, misconfig, rce]
+  description: "The Tomcat Manager or Host Manager web application is reachable from the internet. Even when authentication is enforced, its presence exposes a WAR deployment interface that is a critical target for credential attacks leading to remote code execution."
+  remediation: "Remove the Manager and Host Manager applications from production deployments, or restrict access to management network CIDRs via RemoteAddrValve in context.xml. Change all default credentials immediately."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /manager/html
+      - /manager/text
+      - /host-manager/html
+      - /manager/
+    stop-at-first-match: false
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        dsl: "status_code == 200 && (contains(body, 'Tomcat Manager') || contains(body, 'Tomcat Web Application Manager'))"
+      - type: dsl
+        dsl: "status_code == 401 && contains(headers, 'Tomcat Manager')"

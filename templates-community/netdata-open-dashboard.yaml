@@ -1,0 +1,27 @@
+id: netdata-open-dashboard
+info:
+  name: Netdata Monitoring Dashboard Exposed Without Authentication
+  severity: medium
+  tags: [netdata, monitoring, devops, detection, open-instance, no-auth]
+  description: "Netdata real-time performance monitoring API is publicly accessible without authentication. Exposes host metrics, running process lists, disk and network statistics, and system configuration details to any caller."
+  remediation: "Enable Netdata authentication via an API key or front the dashboard with a reverse proxy requiring basic auth. Restrict access to internal networks only."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /api/v1/info
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["netdata"]
+        part: body
+      - type: word
+        words: ["version", "uid"]
+        part: body
+        condition: and
+      - type: word
+        words: ["application/json"]
+        part: header

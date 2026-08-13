@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 func resp(status int, body string, headers map[string]string) *httpclient.Response {

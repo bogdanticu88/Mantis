@@ -1,0 +1,38 @@
+id: admin-panel-no-auth
+info:
+  name: Admin Panel Accessible Without Authentication
+  severity: critical
+  tags: [admin, authentication, access-control, unauthenticated, auth-jwt-misconfig]
+  description: "Checks whether common admin panel paths return dashboard content without requiring authentication. Unauthenticated admin access allows full application compromise."
+  remediation: "Place all admin paths behind authentication and authorization middleware. Consider IP allowlisting for admin interfaces in addition to credential checks."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - /admin
+      - /admin/
+      - /admin/dashboard
+      - /administrator
+      - /administrator/
+      - /admin/panel
+      - /backend/
+      - /manage/
+      - /management/dashboard
+      - /adminpanel
+    stop-at-first-match: false
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Admin Dashboard", "admin panel", "System Administration", "User Management", "control panel", "Site Administration", "manage users", "system settings"]
+        part: body
+        condition: or
+      - type: word
+        words: ["type=\"password\"", "type='password'", "<input", "login", "sign in", "Sign In"]
+        part: body
+        condition: or
+        negative: true

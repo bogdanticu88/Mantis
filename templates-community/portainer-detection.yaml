@@ -1,0 +1,22 @@
+id: portainer-detection
+info:
+  name: Portainer Docker UI Login Panel Detected
+  severity: info
+  tags: [portainer, docker, devops, detection, login-panel]
+  description: "Portainer Docker management UI login page is publicly accessible. The interface provides full Docker and Kubernetes environment management and reveals the container management attack surface."
+  remediation: "Restrict Portainer to authorized networks only. Place it behind a VPN or network boundary. Do not expose the management UI to the public internet."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Portainer"]
+        part: body
+      - type: dsl
+        dsl: "content_length > 500"

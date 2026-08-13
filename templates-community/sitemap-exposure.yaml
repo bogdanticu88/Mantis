@@ -1,0 +1,26 @@
+id: sitemap-exposure
+info:
+  name: Sitemap XML Path Enumeration
+  severity: info
+  tags: [sitemap, information-disclosure, recon, miscellaneous-security]
+  description: "A publicly accessible sitemap.xml enumerates all application URLs, including paths to authenticated, staging, or sensitive areas. This accelerates content discovery for attackers."
+  remediation: "Audit sitemap contents before publishing. Remove references to authenticated, internal, or staging pages."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /sitemap.xml
+      - /sitemap_index.xml
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["<urlset", "<sitemapindex", "<loc>"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 100"

@@ -1,0 +1,30 @@
+id: magento-config-exposure
+info:
+  name: Magento Database Configuration File Exposed
+  severity: critical
+  tags: [magento, cms, ecommerce, credentials, database, disclosure]
+  description: "Magento XML or PHP configuration files are publicly accessible, exposing database host, username, and password in plaintext. An attacker with this information can dump the full database including customer PII and payment data."
+  remediation: "Configure the web server to deny all requests to /app/etc/. Move sensitive configuration to environment variables and ensure files outside the web root cannot be served."
+  cwe: "CWE-312"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    paths:
+      - /app/etc/local.xml
+      - /app/etc/config.xml
+      - /app/etc/env.php
+      - /app/etc/config.php
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["<host>", "<username>", "<password>", "db_password", "'db_user'", "db_name"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ['<host>[^<]+</host>', '<password>[^<]+</password>']
+        part: body
+        condition: or

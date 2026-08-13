@@ -1,0 +1,33 @@
+id: server-error-verbose
+info:
+  name: Verbose Server Error Page Information Disclosure
+  severity: medium
+  tags: [error-page, information-disclosure, stack-trace, misconfiguration, recon]
+  description: "Probes standard error paths to detect verbose error responses that leak internal stack traces, absolute file system paths, framework versions, or server software details in 4xx/5xx responses."
+  remediation: "Implement custom error pages for all HTTP error codes. Suppress framework default error output in production using environment-specific configuration."
+  cwe: "CWE-209"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /this-path-does-not-exist-mantis-probe
+      - /index.php/this-path-does-not-exist-mantis-probe
+      - /api/this-path-does-not-exist-mantis-probe
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [404, 500, 503]
+      - type: regex
+        regex:
+          - "at [a-zA-Z0-9_\\.]+\\([a-zA-Z0-9_]+\\.java:\\d+\\)"
+          - "Traceback \\(most recent call last\\)"
+          - "PHP (Fatal error|Warning|Notice):"
+          - "(Apache|nginx|IIS)/[\\d\\.]+"
+          - "(ASP\\.NET|Rails|Laravel|Django|Spring) [\\d\\.]+"
+          - "/var/www/|/home/[a-z]+/|C:\\\\inetpub\\\\"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 512"

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"mantis/internal/httpclient"
-	"mantis/internal/reporters"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/reporters"
 )
 
 // This is a direct regression test for the flag-ordering bug found while

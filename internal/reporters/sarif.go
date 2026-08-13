@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 // SARIF 2.1.0 output, mainly for GitHub code scanning.

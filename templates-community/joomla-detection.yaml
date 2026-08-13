@@ -1,0 +1,20 @@
+id: joomla-detection
+info:
+  name: Joomla Installation Detected
+  severity: info
+  tags: [tech, fingerprint, joomla, cms]
+  description: "Joomla is running on this host. Joomla has a history of high-severity vulnerabilities in core and popular extensions."
+  remediation: "Keep Joomla core and extensions updated. Restrict access to /administrator/ by IP where possible."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /administrator/index.php
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Joomla", "joomla"]
+        condition: or

@@ -1,0 +1,20 @@
+id: jenkins-anonymous-access
+info:
+  name: Jenkins Allows Anonymous API Access
+  severity: high
+  tags: [auth, jenkins, cicd, exposure]
+  description: "Jenkins responds to anonymous requests on its JSON API, exposing build history, job configurations, and potentially credentials stored in the Jenkins credential store."
+  remediation: "Enable Jenkins security (Manage Jenkins > Configure Global Security) and set Authorization to Matrix-based or Project-based, granting anonymous users no permissions."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /api/json
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["\"jobs\"", "\"_class\""]
+        condition: and

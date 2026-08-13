@@ -1,0 +1,29 @@
+id: gogs-detection
+info:
+  name: Gogs Self-Hosted Git Service Detection
+  severity: info
+  tags: [gogs, detection, developer-tools, vcs, git]
+  description: "Detects a Gogs (Go Git Service) instance. Gogs is a lightweight self-hosted git server. Exposed instances may allow unauthenticated repository browsing or user registration."
+  remediation: "Enable REQUIRE_SIGNIN_VIEW, disable open registration, and restrict network access."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /user/login
+      - /explore
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Gogs", "gogs"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["Powered by Gogs", "<meta[^>]+Gogs", "gogits", "gogs\\.io"]
+        part: body
+        condition: or

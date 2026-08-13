@@ -1,0 +1,29 @@
+id: redmine-detection
+info:
+  name: Redmine Project Management Detection
+  severity: info
+  tags: [redmine, detection, developer-tools, project-management]
+  description: "Detects an exposed Redmine instance. Redmine manages issues, wikis, and project documentation. Public access may expose project roadmaps, issue trackers, and internal communications."
+  remediation: "Set REQUIRE_SIGNIN_VIEW, disable public visibility for sensitive projects, and restrict access by network."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /login
+      - /projects
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Redmine", "redmine"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["Powered by.*Redmine", "<meta[^>]+Redmine", "redmine\\.org", "class=\"flash\\s+notice\""]
+        part: body
+        condition: or

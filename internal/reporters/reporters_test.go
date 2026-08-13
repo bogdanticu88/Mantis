@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 func sampleReport() Report {

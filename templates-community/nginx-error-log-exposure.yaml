@@ -1,0 +1,33 @@
+id: nginx-error-log-exposure
+info:
+  name: Nginx Error Log Exposure
+  severity: high
+  tags: [nginx, log-exposure, error-log, misconfiguration]
+  description: "Detects publicly accessible nginx error logs. These logs may reveal upstream configuration, internal hostnames, filesystem paths, and connection errors that aid lateral movement."
+  remediation: "Ensure error_log directives write to /var/log/nginx/ which must not be aliased under any server block location. Deny access to /logs paths explicitly."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /logs/error.log
+      - /nginx_error.log
+      - /nginx/logs/error.log
+      - /log/nginx_error.log
+      - /error_log
+      - /logs/nginx_error.log
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "\\[error\\].*nginx"
+          - "\\[(warn|error|crit|alert|emerg)\\] \\d+#\\d+:"
+          - "nginx/\\d+\\.\\d+"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 64"

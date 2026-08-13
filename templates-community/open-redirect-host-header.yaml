@@ -1,0 +1,38 @@
+id: open-redirect-host-header
+info:
+  name: Open Redirect via Host Header Injection
+  severity: medium
+  tags: [redirect, host-header, open-redirect, injection, dast]
+  description: "Tests whether the application uses the Host or X-Forwarded-Host header to construct absolute redirect URLs or canonical links. A redirect response or body content referencing the injected hostname confirms the application trusts the Host header without validation."
+  remediation: "Never use the Host header value to construct redirect destinations or absolute URLs. Maintain a server-side allowlist of valid hostnames. Use relative paths for all internal redirects."
+  cwe: "CWE-601"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - "/"
+      - "/login"
+      - "/logout"
+      - "/redirect"
+      - "/auth/callback"
+      - "/oauth/callback"
+      - "/api/redirect"
+    headers:
+      Host: "evil.example.com"
+      X-Forwarded-Host: "evil.example.com"
+      X-Host: "evil.example.com"
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "evil.example.com"
+        part: header
+        condition: or
+      - type: regex
+        regex:
+          - "(?i)href=[\"']https?://evil\\.example\\.com"
+          - "(?i)action=[\"']https?://evil\\.example\\.com"
+          - "evil\\.example\\.com"
+        part: body
+        condition: or

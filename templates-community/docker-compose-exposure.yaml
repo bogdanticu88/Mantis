@@ -1,0 +1,29 @@
+id: docker-compose-exposure
+info:
+  name: "Docker Compose Configuration File Exposure"
+  severity: high
+  tags: [docker, devops, container, config, exposure, config-file-exposures]
+  description: "Detects publicly accessible Docker Compose files that reveal internal service topology, image names, port mappings, volume mounts, and potentially embedded environment variable secrets."
+  remediation: "Remove docker-compose files from the web root. Add to .gitignore and block access via web server configuration. Use Docker secrets for sensitive values."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /docker-compose.yml
+      - /docker-compose.yaml
+      - /docker-compose.override.yml
+      - /docker-compose.override.yaml
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "services:"
+          - "image:"
+          - "volumes:"
+        part: body
+        condition: or

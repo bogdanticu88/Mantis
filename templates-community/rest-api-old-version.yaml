@@ -1,0 +1,34 @@
+id: rest-api-old-version
+info:
+  name: Outdated REST API Version Accessible
+  severity: medium
+  tags: [api, rest, versioning, information-disclosure, api-graphql-security]
+  description: "Probes older API version paths (/api/v1/, /v1/, etc.) that may still be active. Legacy versions often lack current security controls, expose deprecated endpoints, or return more verbose data than current versions."
+  remediation: "Decommission unused API versions. If retained for compatibility, apply the same authentication, authorization, and rate-limiting controls as the current version."
+  cwe: "CWE-1059"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - /api/v1/
+      - /api/v1
+      - /api/v2/
+      - /api/v2
+      - /v1/
+      - /v1
+      - /v2/
+      - /v2
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 201]
+      - type: regex
+        regex:
+          - "application/json"
+          - "\\{.*\"(data|result|results|response|items|records|users|version)\""
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 64"

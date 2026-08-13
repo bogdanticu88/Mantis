@@ -1,0 +1,22 @@
+id: spring-actuator-beans
+info:
+  name: Spring Boot Actuator Beans Endpoint Exposed
+  severity: high
+  tags: [spring, spring-boot, actuator, java, detection, web-server-framework-detection, sensitive-exposure]
+  description: "The /actuator/beans endpoint exposes the full Spring application context: all bean names, class names, scopes, and dependency graphs. This information directly supports deserialization gadget chain research and injection attack planning."
+  remediation: "Disable with management.endpoint.beans.enabled=false or require authentication before any actuator access. Never expose actuator endpoints on a public interface."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /actuator/beans
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['"beans"']
+        part: body
+      - type: dsl
+        dsl: "content_length > 512"

@@ -1,0 +1,47 @@
+id: bitbucket-server-detection
+info:
+  name: Bitbucket Server / Data Center Detection
+  severity: info
+  tags: [bitbucket, atlassian, detection, developer-tools, vcs, git]
+  description: "Detects an exposed Bitbucket Server or Data Center instance. Bitbucket hosts source repositories and integrates with CI/CD pipelines. Unauthenticated access or public project visibility can expose sensitive code."
+  remediation: "Disable anonymous access, require authentication for all project browsing, and place behind a VPN or IP allowlist."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /login
+      - /dashboard
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 302]
+      - type: word
+        words: ["Bitbucket", "Atlassian Bitbucket"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["Bitbucket Server", "Bitbucket Data Center", "com\\.atlassian\\.bitbucket", "aui-version"]
+        part: body
+        condition: or
+
+  - method: GET
+    path: /rest/api/1.0/application-properties
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["displayName", "version", "buildNumber"]
+        part: body
+        condition: and
+      - type: regex
+        regex: ["\"displayName\":\\s*\"Bitbucket\""]
+        part: body
+    extractors:
+      - type: json
+        name: bitbucket_version
+        path: "$.version"

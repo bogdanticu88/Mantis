@@ -7,8 +7,8 @@ import (
 	"sort"
 	"time"
 
-	"mantis/internal/findings"
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 // Form mirrors dast.Form's shape without importing the dast package (attacks

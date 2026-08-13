@@ -1,0 +1,24 @@
+id: npmrc-exposure
+info:
+  name: "npm Configuration File Token Exposure"
+  severity: high
+  tags: [npm, nodejs, config, token, registry, exposure, config-file-exposures]
+  description: "Detects publicly accessible .npmrc files that may contain npm authentication tokens granting read or publish access to private package registries."
+  remediation: "Remove .npmrc from the web root and add to .gitignore. Rotate any exposed tokens immediately via npm token revoke or the registry's token management interface."
+  cwe: "CWE-538"
+  owasp: "A06:2021-Vulnerable and Outdated Components"
+
+requests:
+  - method: GET
+    path: /.npmrc
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "_authToken"
+          - "_auth"
+          - "//registry"
+        part: body
+        condition: or

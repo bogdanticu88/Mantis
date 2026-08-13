@@ -1,0 +1,28 @@
+id: kibana-default-creds
+info:
+  name: "Kibana Default Credentials (elastic:elastic)"
+  severity: critical
+  tags: [kibana, elasticsearch, default-credentials-extended, default-creds, elastic]
+  description: "Kibana accepts the default elastic superuser credentials, granting full administrative access to all dashboards, index data, and Elasticsearch cluster management."
+  remediation: "Change the elastic password immediately using the Elasticsearch reset-password tool. Use dedicated service accounts with minimal index privileges. Enable TLS for all transport."
+  cwe: "CWE-798"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: POST
+    path: /internal/security/login
+    headers:
+      Content-Type: "application/json"
+      kbn-xsrf: "true"
+    body: '{"providerType":"basic","providerName":"basic","currentURL":"/","params":{"username":"elastic","password":"elastic"}}'
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["username", "authentication_realm", "full_name"]
+        part: body
+        condition: or
+      - type: word
+        words: ["elastic"]
+        part: body

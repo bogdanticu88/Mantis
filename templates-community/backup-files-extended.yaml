@@ -1,0 +1,42 @@
+id: backup-files-extended
+info:
+  name: Backup or Archive File Exposed
+  severity: high
+  tags: [exposure, backup, source-disclosure]
+  description: "A backup or archive file is publicly accessible at a predictable path. These files often contain database dumps, source code, configuration, or credentials that are not safe to expose."
+  remediation: "Remove backup files from the web root. Add a deny rule at the web server level for common archive extensions (.zip, .tar.gz, .sql, .bak, .dump). Audit deployments with a post-deployment check."
+  cwe: "CWE-530"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /backup.zip
+      - /backup.tar.gz
+      - /backup.tar
+      - /backup.sql
+      - /backup.sql.gz
+      - /backup.bak
+      - /backup.dump
+      - /db.sql
+      - /db.sql.gz
+      - /database.sql
+      - /database.sql.gz
+      - /dump.sql
+      - /data.sql
+      - /site.zip
+      - /www.zip
+      - /htdocs.zip
+      - /public_html.zip
+      - /web.zip
+      - /app.zip
+      - /old.zip
+      - /backup.old
+      - /database.bak
+      - /config.bak
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: dsl
+        dsl: "content_length > 512"

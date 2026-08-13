@@ -1,0 +1,29 @@
+id: plesk-detection
+info:
+  name: Plesk Hosting Control Panel Exposed
+  severity: medium
+  tags: [plesk, hosting, admin-panel, network-admin-panels]
+  description: "Plesk web hosting control panel login is publicly reachable (typically port 8443). Provides full server management including DNS, web hosting, email, and databases."
+  remediation: "Restrict Plesk port 8443 to administrator IPs via firewall. Enable Plesk IP restriction and fail2ban integration. Consider VPN-only access for the management interface."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /login_up.php3
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Plesk", "plesk"]
+        part: body
+        condition: or
+      - type: word
+        words: ["plesk_auth_token", "/plesk/", "locale_id", "login_name"]
+        part: body
+        condition: or

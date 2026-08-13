@@ -1,0 +1,29 @@
+id: htaccess-exposure
+info:
+  name: Apache .htaccess File Exposure
+  severity: high
+  tags: [htaccess, apache, configuration, exposure, miscellaneous-security]
+  description: ".htaccess is publicly readable, leaking Apache rewrite rules, basic-auth configuration, IP access-control lists, and custom error directives. This information directly aids bypass attempts."
+  remediation: "Block access to .htaccess at the web server level. In Apache 2.4: <Files .htaccess> Require all denied </Files>. In Nginx: location ~ /\\.htaccess { deny all; }"
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /.htaccess
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "RewriteEngine"
+          - "RewriteRule"
+          - "AuthType"
+          - "AuthName"
+          - "Options"
+          - "Order deny"
+          - "Deny from"
+          - "Require"
+        part: body
+        condition: or

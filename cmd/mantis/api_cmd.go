@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"mantis/internal/api"
-	"mantis/internal/findings"
-	"mantis/internal/gate"
-	"mantis/internal/httpclient"
-	"mantis/internal/reporters"
+	"github.com/bogdanticu88/Mantis/internal/api"
+	"github.com/bogdanticu88/Mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/gate"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/reporters"
 )
 
 func cmdAPI(args []string) error {

@@ -1,0 +1,23 @@
+id: grafana-default-creds
+info:
+  name: Grafana Default Admin Credentials (admin:admin)
+  severity: critical
+  tags: [default-creds, grafana, auth]
+  description: "Grafana accepted the factory-default credentials admin:admin. Anyone who can reach this host has full administrative access to dashboards, data sources, and their embedded credentials."
+  remediation: "Change the admin password immediately via the UI or the GF_SECURITY_ADMIN_PASSWORD environment variable. Enforce strong password policy and consider disabling the built-in admin account in favour of an IdP integration."
+  cwe: "CWE-1392"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: POST
+    path: /api/login
+    headers:
+      Content-Type: application/json
+    body: '{"user":"admin","password":"admin"}'
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["\"message\":\"Logged in\"", "\"userId\""]
+        condition: or

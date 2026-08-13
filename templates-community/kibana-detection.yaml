@@ -1,0 +1,20 @@
+id: kibana-detection
+info:
+  name: Kibana Dashboard Detected
+  severity: info
+  tags: [tech, fingerprint, kibana, elasticsearch, monitoring]
+  description: "A Kibana instance is accessible. Kibana provides a UI over Elasticsearch and can expose sensitive log data and index contents."
+  remediation: "Enable Kibana authentication and restrict access to trusted network ranges. Configure TLS between Kibana and Elasticsearch."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /api/status
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["kibana", "\"version\""]
+        condition: or

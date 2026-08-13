@@ -1,0 +1,28 @@
+id: spring-actuator-health
+info:
+  name: Spring Boot Actuator Health Endpoint Exposed
+  severity: info
+  tags: [spring, spring-boot, actuator, java, detection, web-server-framework-detection, information-disclosure]
+  description: "The /actuator/health endpoint confirms a Spring Boot application is deployed and may expose component health details including database connectivity status, disk space metrics, and custom health indicator output."
+  remediation: "Require authentication for all actuator endpoints via Spring Security. Bind the management server to a private interface and restrict exposure with management.endpoints.web.exposure.include."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /actuator/health
+      - /actuator/health/liveness
+      - /actuator/health/readiness
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['"status"']
+        part: body
+      - type: word
+        words: ['UP', 'DOWN', 'OUT_OF_SERVICE', 'UNKNOWN']
+        part: body
+        condition: or

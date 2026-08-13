@@ -1,0 +1,33 @@
+id: router-admin-panel
+info:
+  name: Network Router Admin Panel Exposed
+  severity: medium
+  tags: [router, network-device, admin-panel, network-admin-panels, default-credentials]
+  description: "A network router administration panel is publicly accessible. Router admin interfaces often carry default credentials and, if compromised, allow traffic interception, DNS hijacking, and network pivoting."
+  remediation: "Disable remote administration or restrict it to the management VLAN. Change default credentials immediately. Enable HTTPS-only admin access and block the admin port on internet-facing interfaces."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /admin
+      - /login.asp
+      - /login.htm
+      - /setup.cgi
+      - /index.asp
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["NETGEAR", "Linksys", "TP-LINK", "TP-Link", "D-Link", "ASUS Router", "Ubiquiti", "MikroTik", "Cisco RV", "ZyXEL", "Belkin", "AirPort"]
+        part: body
+        condition: or
+      - type: word
+        words: ["password", "admin"]
+        part: body
+        condition: and

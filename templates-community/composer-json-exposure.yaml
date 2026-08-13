@@ -1,0 +1,29 @@
+id: composer-json-exposure
+info:
+  name: Composer Dependency File Exposure
+  severity: medium
+  tags: [composer, php, dependencies, exposure, supply-chain, miscellaneous-security]
+  description: "composer.json or composer.lock is publicly accessible, exposing PHP dependency names, exact pinned versions, and package hashes. This directly supports fingerprinting for known-vulnerable library versions."
+  remediation: "Deny web access to composer.json and composer.lock at the server level. Move these files outside the document root where possible."
+  cwe: "CWE-538"
+  owasp: "A06:2021-Vulnerable and Outdated Components"
+
+requests:
+  - method: GET
+    paths:
+      - /composer.json
+      - /composer.lock
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "require"
+          - "packages"
+          - "autoload"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 80"

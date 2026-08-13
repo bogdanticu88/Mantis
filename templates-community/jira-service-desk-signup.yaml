@@ -1,0 +1,26 @@
+id: jira-service-desk-signup
+info:
+  name: Jira Service Desk Public Signup Enabled
+  severity: medium
+  tags: [jira, atlassian, servicedesk, signup, account-creation, miscellaneous-security]
+  description: "The Jira Service Desk customer portal signup page is publicly accessible. Any unauthenticated visitor can self-register, submit tickets, and potentially access internal service portal content. This also enables user enumeration via the registration flow."
+  remediation: "In Project Settings > Customer Permissions, disable public customer signup and restrict the portal to invited users only."
+  cwe: "CWE-285"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /servicedesk/customer/user/signup
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "Sign up"
+          - "Create an account"
+          - "servicedesk"
+          - "Service Desk"
+          - "signup"
+        part: body
+        condition: or

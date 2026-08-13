@@ -7,8 +7,8 @@ import (
 
 	"golang.org/x/net/html"
 
-	"mantis/internal/findings"
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 type Crawler struct {

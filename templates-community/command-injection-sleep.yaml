@@ -1,0 +1,40 @@
+id: command-injection-sleep
+info:
+  name: Blind OS Command Injection via Sleep Timing
+  severity: critical
+  tags: [injection, rce, command-injection, blind, timing, dast]
+  description: "Tests for blind OS command injection by submitting sleep payloads in POST body parameters to common execution endpoints. A 200 response from an endpoint that would otherwise error on unrecognised input is a weak signal; correlate with observed latency to confirm."
+  remediation: "Reject all shell metacharacters from user input. Never construct OS commands from user-controlled data. Use language-native library calls for any system interaction."
+  cwe: "CWE-78"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  payload:
+    - "; sleep 5 #"
+    - "| sleep 5"
+    - "`sleep 5`"
+    - "$(sleep 5)"
+    - "%0a sleep 5"
+    - "1; sleep 5"
+    - "1 | sleep 5"
+    - "1 && sleep 5"
+
+requests:
+  - method: POST
+    paths:
+      - "/api/exec"
+      - "/api/run"
+      - "/api/command"
+      - "/api/shell"
+      - "/exec"
+      - "/run"
+      - "/shell"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+    body: "cmd={{payload}}&command={{payload}}&input={{payload}}"
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl: "status_code == 200"
+      - type: dsl
+        dsl: "content_length > 0"

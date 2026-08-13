@@ -1,0 +1,32 @@
+id: adminer-panel
+info:
+  name: Adminer Database Admin Panel Exposed
+  severity: medium
+  tags: [adminer, database, admin-panel, network-admin-panels]
+  description: "Adminer single-file database management interface is publicly accessible. A successful credential attack grants full read/write access to all databases on the server."
+  remediation: "Remove Adminer from production servers. Restrict access to internal networks or an authenticated reverse proxy only."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /adminer.php
+      - /adminer/
+      - /adminer/adminer.php
+      - /database.php
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Adminer"]
+        part: body
+      - type: word
+        words: ["<form", "server", "username"]
+        part: body
+        condition: and
+      - type: dsl
+        dsl: "content_length > 512"

@@ -1,0 +1,25 @@
+id: palo-alto-globalprotect
+info:
+  name: Palo Alto GlobalProtect VPN Portal Exposed
+  severity: medium
+  tags: [paloalto, globalprotect, vpn, network-admin-panels, firewall]
+  description: "Palo Alto Networks GlobalProtect VPN portal is publicly reachable. GlobalProtect portals have been targeted via CVE-2024-3400 (unauthenticated RCE) and credential-stuffing campaigns."
+  remediation: "Apply PAN-OS security advisories immediately. Enable multi-factor authentication. Restrict portal access to known source IPs where operationally feasible and monitor authentication logs."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /global-protect/login.esp
+      - /global-protect/portal/css/login.css
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["GlobalProtect", "global-protect", "PAN-OS", "Palo Alto Networks"]
+        part: body
+        condition: or

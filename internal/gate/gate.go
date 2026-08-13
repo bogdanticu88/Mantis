@@ -6,7 +6,7 @@ package gate
 import (
 	"strings"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 // Decide returns whether the run passes and the process exit code to use.

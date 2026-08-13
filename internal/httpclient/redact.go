@@ -3,7 +3,7 @@ package httpclient
 import (
 	"strings"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 const redactedPlaceholder = "***REDACTED***"

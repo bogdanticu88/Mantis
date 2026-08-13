@@ -1,0 +1,27 @@
+id: web-config-exposure
+info:
+  name: "ASP.NET Web.config File Exposure"
+  severity: high
+  tags: [config, aspnet, iis, exposure, config-file-exposures]
+  description: "Detects publicly accessible web.config files that may contain database connection strings, API keys, or application secrets."
+  remediation: "Deny direct HTTP access to web.config via IIS request filtering rules. Never store plaintext credentials in configuration files committed to source control."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /web.config
+      - /Web.config
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "<configuration>"
+          - "<connectionStrings>"
+          - "<appSettings>"
+        part: body
+        condition: or

@@ -1,0 +1,25 @@
+id: git-config-exposure
+info:
+  name: Git Repository Config File Exposure
+  severity: high
+  tags: [git, source-control, configuration, exposure, credentials, miscellaneous-security]
+  description: ".git/config is publicly readable, disclosing the remote origin URL (which may embed credentials or internal hostnames), branch names, and remote tracking configuration."
+  remediation: "Block access to .git directories at the web server. In Nginx: location ~ /\\.git { deny all; } In Apache: RedirectMatch 404 /\\.git"
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /.git/config
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "[core]"
+          - "repositoryformatversion"
+          - "[remote"
+          - "[branch"
+        part: body
+        condition: or

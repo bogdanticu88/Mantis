@@ -1,0 +1,24 @@
+id: couchdb-no-auth
+info:
+  name: "CouchDB Unauthenticated Database Listing"
+  severity: high
+  tags: [couchdb, database, default-credentials-extended, nosql, misconfig]
+  description: "CouchDB allows unauthenticated access to the /_all_dbs endpoint, exposing all database names. In party mode CouchDB, all operations are permitted without credentials."
+  remediation: "Set require_valid_user = true in the [chttpd] and [couch_httpd_auth] sections of local.ini. Create an admin account via the /_node/_local/_config/admins API."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /_all_dbs
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["_replicator", "_users"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ['^\[']
+        part: body

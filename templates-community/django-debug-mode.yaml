@@ -1,0 +1,21 @@
+id: django-debug-mode
+info:
+  name: Django Application DEBUG Mode Enabled
+  severity: high
+  tags: [django, python, debug, detection, web-server-framework-detection, information-disclosure, sensitive-exposure]
+  description: "The Django application has DEBUG=True active in production. The debug 404 page lists every registered URL pattern, exposing the full routing table. Any unhandled exception produces a traceback with local variable values, settings references, and SQL queries."
+  remediation: "Set DEBUG=False in settings.py for production. Define ALLOWED_HOSTS and configure custom 404/500 error page handlers."
+  cwe: "CWE-94"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /mantis-probe-nonexistent-path
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [404]
+      - type: word
+        words: ['Django tried these URL patterns', 'Page not found (404)', 'Using the URLconf defined in']
+        part: body
+        condition: or

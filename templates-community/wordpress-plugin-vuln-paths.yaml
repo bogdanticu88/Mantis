@@ -1,0 +1,35 @@
+id: wordpress-plugin-vuln-paths
+info:
+  name: WordPress Known Vulnerable Plugin Files Accessible
+  severity: high
+  tags: [wordpress, cms, plugin, timthumb, revslider, rce, vulnerability, cve]
+  description: "Script files from known critically vulnerable WordPress plugins are directly accessible. TimThumb (CVE-2011-4106) allows remote file inclusion, Revolution Slider (CVE-2014-9734) allows arbitrary file upload, and WP File Manager (CVE-2020-25213) allows unauthenticated RCE."
+  remediation: "Update all plugins to their latest versions. Remove unused plugins completely. Block direct PHP file execution via web server configuration."
+  cwe: "CWE-829"
+  owasp: "A06:2021-Vulnerable and Outdated Components"
+
+requests:
+  - method: GET
+    paths:
+      - /wp-content/plugins/timthumb/timthumb.php
+      - /wp-content/themes/twentyten/timthumb.php
+      - /wp-content/plugins/revslider/temp/update_extract/revslider/update.php
+      - /wp-content/plugins/wp-file-manager/lib/php/connector.minimal.php
+      - /wp-content/plugins/duplicator/installer/build/view.step4.php
+      - /wp-content/plugins/all-in-one-seo-pack/admin/display/settings-page.php
+      - /wp-content/plugins/wp-super-cache/wp-cache-phase2.php
+      - /wp-content/plugins/yuzo-related-post/yuzo_related_post.php
+
+    stop-at-first-match: false
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: dsl
+        dsl: "content_length > 200"
+      - type: word
+        words: ["Not Found", "Error 404", "page not found"]
+        part: body
+        negative: true
+        condition: or

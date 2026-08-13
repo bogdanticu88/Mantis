@@ -1,0 +1,20 @@
+id: docker-api-open
+info:
+  name: Docker Remote API Accessible Without Authentication
+  severity: critical
+  tags: [exposure, docker, auth, container]
+  description: "The Docker daemon REST API is reachable without a TLS client certificate. Unauthenticated access to the Docker API is equivalent to root on the host: an attacker can run privileged containers, mount the host filesystem, and escape to the host OS."
+  remediation: "Never expose the Docker daemon on a TCP socket without mutual TLS. Use a Unix socket restricted to the docker group, or a purpose-built proxy (e.g. Traefik, Caddy) with authentication."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /v1.24/containers/json
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["\"Id\"", "\"Image\"", "\"Names\""]
+        condition: or

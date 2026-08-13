@@ -1,0 +1,30 @@
+id: spring-boot-h2-console
+info:
+  name: Spring Boot H2 Console Exposed
+  severity: high
+  tags: [spring-boot, h2, database, console, exposure, java, miscellaneous-security]
+  description: "The H2 in-memory database web console is publicly accessible. An unauthenticated attacker can connect to the database and execute arbitrary SQL, including INIT connection string payloads that achieve remote code execution via Java class loading."
+  remediation: "Set spring.h2.console.enabled=false in application.properties for all non-development profiles. If local development access is needed, restrict via Spring Security to localhost or authenticated sessions only."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /h2-console
+      - /h2-console/
+      - /h2-console/login.do
+      - /console/login.do
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "H2 Console"
+          - "H2 Web Console"
+          - "H2 Database Engine"
+          - "login.do"
+        part: body
+        condition: or

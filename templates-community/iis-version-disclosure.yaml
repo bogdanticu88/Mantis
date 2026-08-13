@@ -1,0 +1,18 @@
+id: iis-version-disclosure
+info:
+  name: Microsoft IIS Version Disclosure via Server Header
+  severity: info
+  tags: [iis, microsoft, windows, detection, web-server-framework-detection, information-disclosure, header]
+  description: "The Server response header includes the exact IIS version string, enabling targeted exploitation of version-specific CVEs and informed patch-gap analysis by attackers."
+  remediation: "Remove the Server header using IIS URL Rewrite outbound rules or set removeServerHeader=true in the applicationHost.config requestFiltering section."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers-condition: and
+    matchers:
+      - type: word
+        words: ['Microsoft-IIS/']
+        part: header

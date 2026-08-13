@@ -1,0 +1,23 @@
+id: wordpress-debug-log
+info:
+  name: WordPress Debug Log Exposed
+  severity: high
+  tags: [wordpress, debug, log-exposure, cms, info-disclosure]
+  description: "The WordPress debug log at wp-content/debug.log is publicly accessible. This file can contain PHP errors, stack traces, database queries, and other sensitive application internals."
+  remediation: "Set WP_DEBUG to false in production or restrict access to the debug.log file via web server configuration."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /wp-content/debug.log
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["PHP", "WordPress", "Notice", "Warning", "Fatal error"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 0"

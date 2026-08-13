@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"mantis/internal/httpclient"
-	"mantis/internal/jsonpath"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/jsonpath"
 )
 
 // runExtractors populates vars with any values spec's extractors can pull

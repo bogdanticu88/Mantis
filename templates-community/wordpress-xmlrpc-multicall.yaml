@@ -1,0 +1,30 @@
+id: wordpress-xmlrpc-multicall
+info:
+  name: WordPress XML-RPC Interface Enabled
+  severity: high
+  tags: [wordpress, cms, xmlrpc, brute-force, attack-surface]
+  description: "WordPress XML-RPC is enabled and responds to method calls. The multicall feature amplifies brute-force attacks, allowing thousands of credential pairs to be tested in a single HTTP request while bypassing per-request rate limiting."
+  remediation: "Disable XML-RPC entirely if not required by adding a filter in functions.php or using a security plugin. Block xmlrpc.php access by IP at the web server level."
+  cwe: "CWE-307"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: POST
+    path: /xmlrpc.php
+    headers:
+      Content-Type: "text/xml"
+    body: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <methodCall>
+        <methodName>system.listMethods</methodName>
+        <params></params>
+      </methodCall>
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["methodResponse", "wp.getUsersBlogs", "wp.getPost"]
+        part: body
+        condition: or

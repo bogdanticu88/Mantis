@@ -3,7 +3,10 @@
 // match into a findings.Finding.
 package templates
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Info struct {
 	Name        string   `yaml:"name"`
@@ -56,8 +59,15 @@ type Extractor struct {
 
 // RequestSpec is one HTTP request in a template's chain.
 type RequestSpec struct {
-	Method  string            `yaml:"method"`
-	Path    string            `yaml:"path"`
+	Method string   `yaml:"method"`
+	Path   string   `yaml:"path,omitempty"`  // single path; use Path or Paths, not both
+	Paths  []string `yaml:"paths,omitempty"` // multiple paths tried independently
+
+	// StopAtFirstMatch only applies when Paths is used. When false (default)
+	// every matching path produces its own finding. Set to true for templates
+	// that only need to know whether any path is reachable.
+	StopAtFirstMatch bool `yaml:"stop-at-first-match,omitempty"`
+
 	Headers map[string]string `yaml:"headers,omitempty"`
 	Body    string            `yaml:"body,omitempty"`
 
@@ -66,13 +76,38 @@ type RequestSpec struct {
 	Extractors        []Extractor `yaml:"extractors,omitempty"`
 }
 
+// allPaths returns the effective path list. A single Path is wrapped in a
+// slice so the executor never needs to branch on which field was used.
+func (r RequestSpec) allPaths() []string {
+	if len(r.Paths) > 0 {
+		return r.Paths
+	}
+	return []string{r.Path}
+}
+
 // Template is one template file: an id, some info for reporting, and a
 // chain of one or more requests to run.
 type Template struct {
 	ID        string            `yaml:"id"`
 	Info      Info              `yaml:"info"`
 	Variables map[string]string `yaml:"variables,omitempty"`
-	Requests  []RequestSpec     `yaml:"requests"`
+
+	// Payloads defines named lists of values to inject into request
+	// placeholders. Each placeholder {{name}} or ${name} in a request's
+	// path, body, or headers is replaced with the current payload value.
+	//
+	//   payloads:
+	//     injection: ["'", "' OR 1=1--", "1; DROP TABLE users--"]
+	//
+	// Use attack to control how multiple payload sets are combined.
+	Payloads map[string][]string `yaml:"payloads,omitempty"`
+
+	// Attack controls how payload sets are combined when there is more than
+	// one. "sniper" (default) supports exactly one payload set. "pitchfork"
+	// zips multiple sets in lockstep, stopping at the shortest.
+	Attack string `yaml:"attack,omitempty"`
+
+	Requests []RequestSpec `yaml:"requests"`
 
 	SourcePath string `yaml:"-"`
 }
@@ -95,8 +130,11 @@ func (t *Template) Validate() error {
 		if r.Method == "" {
 			return fmt.Errorf("template %s: requests[%d]: method is required", t.ID, i)
 		}
-		if r.Path == "" {
-			return fmt.Errorf("template %s: requests[%d]: path is required", t.ID, i)
+		if r.Path == "" && len(r.Paths) == 0 {
+			return fmt.Errorf("template %s: requests[%d]: path or paths is required", t.ID, i)
+		}
+		if r.Path != "" && len(r.Paths) > 0 {
+			return fmt.Errorf("template %s: requests[%d]: use either path or paths, not both", t.ID, i)
 		}
 		for j, m := range r.Matchers {
 			if err := m.validate(); err != nil {
@@ -109,6 +147,29 @@ func (t *Template) Validate() error {
 			}
 		}
 	}
+
+	// Payload validation.
+	if len(t.Payloads) > 0 {
+		mode := strings.ToLower(t.Attack)
+		switch mode {
+		case "", "sniper":
+			if len(t.Payloads) > 1 {
+				return fmt.Errorf("template %s: sniper attack mode supports exactly one payload set; use attack: pitchfork for multiple sets", t.ID)
+			}
+		case "pitchfork":
+			// Multiple sets are fine; they are zipped in lockstep.
+		default:
+			return fmt.Errorf("template %s: unknown attack mode %q (want sniper or pitchfork)", t.ID, t.Attack)
+		}
+		for name, vals := range t.Payloads {
+			if len(vals) == 0 {
+				return fmt.Errorf("template %s: payload set %q is empty", t.ID, name)
+			}
+		}
+	} else if t.Attack != "" {
+		return fmt.Errorf("template %s: attack mode %q set but no payloads defined", t.ID, t.Attack)
+	}
+
 	return nil
 }
 

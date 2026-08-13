@@ -1,0 +1,35 @@
+id: http-request-smuggling-te-cl
+info:
+  name: HTTP Request Smuggling TE.CL Header Conflict
+  severity: high
+  tags: [smuggling, http, protocol, desync, injection, dast]
+  description: "Probes for HTTP request smuggling by sending a POST with conflicting Transfer-Encoding: chunked and Content-Length headers. A 400, 408, or 5xx error — or a body referencing chunked encoding problems — indicates the server or an upstream proxy may be susceptible to request desynchronisation."
+  remediation: "Reject or normalise any request that carries both Transfer-Encoding and Content-Length. Upgrade front-end/back-end communication to HTTP/2 or enforce strict header normalisation at the proxy layer."
+  cwe: "CWE-444"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: POST
+    paths:
+      - "/"
+      - "/api"
+      - "/api/v1"
+      - "/app"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Transfer-Encoding: "chunked"
+      Content-Length: "4"
+    body: "1\r\nZ\r\n0\r\n\r\n"
+    matchers-condition: or
+    matchers:
+      - type: status
+        status: [400, 408, 500, 502, 503]
+      - type: regex
+        regex:
+          - "(?i)invalid request"
+          - "(?i)bad request"
+          - "(?i)chunked.*encoding"
+          - "(?i)transfer.encoding"
+          - "(?i)request.*smuggling"
+        part: body
+        condition: or

@@ -1,0 +1,25 @@
+id: aspnet-error-page
+info:
+  name: ASP.NET Diagnostic Endpoints Exposed
+  severity: medium
+  tags: [aspnet, dotnet, microsoft, iis, detection, web-server-framework-detection, information-disclosure, misconfig]
+  description: "ASP.NET diagnostic handlers (elmah.axd, trace.axd) are publicly accessible. These endpoints expose application error logs, stack traces, request parameters, session data, and SQL queries that aid further targeted attacks."
+  remediation: "Restrict elmah.axd and trace.axd to specific management IPs via location blocks in web.config, or remove the handlers entirely from system.webServer/handlers when not required."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /elmah.axd
+      - /elmah.axd/detail
+      - /trace.axd
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['Error Log', 'ELMAH', 'Application Trace', 'Request Details']
+        part: body
+        condition: or

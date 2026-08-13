@@ -1,0 +1,54 @@
+id: graphql-debug-mode
+info:
+  name: GraphQL Debug Console or IDE Exposed
+  severity: high
+  tags: [graphql, api, exposure, debug, ide, api-graphql-security]
+  description: "Checks for open GraphQL IDEs (GraphiQL, Altair, Apollo Sandbox) and full schema introspection. Exposed consoles allow unauthenticated exploration and query execution against the API."
+  remediation: "Disable GraphQL IDEs and restrict introspection queries in production environments."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /graphiql
+      - /graphql/console
+      - /altair
+      - /playground
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "graphiql"
+          - "GraphiQL"
+          - "altair"
+          - "playground"
+          - "graphql-playground"
+        part: body
+        condition: or
+
+  - method: POST
+    path: /graphql
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+    body: '{"query":"{ __schema { queryType { name } types { name kind } } }"}'
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "__schema"
+          - "queryType"
+        part: body
+        condition: and
+      - type: word
+        words:
+          - "errors"
+        part: body
+        negative: true

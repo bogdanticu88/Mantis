@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"mantis/internal/gate"
-	"mantis/internal/reporters"
-	"mantis/internal/smoke"
+	"github.com/bogdanticu88/Mantis/internal/gate"
+	"github.com/bogdanticu88/Mantis/internal/reporters"
+	"github.com/bogdanticu88/Mantis/internal/smoke"
 )
 
 func cmdSmoke(args []string) error {

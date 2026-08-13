@@ -1,0 +1,20 @@
+id: jenkins-detection
+info:
+  name: Jenkins CI Server Detected
+  severity: info
+  tags: [tech, fingerprint, jenkins, cicd]
+  description: "A Jenkins CI/CD server is accessible. Exposed Jenkins instances are high-value targets and frequently carry unauthenticated RCE when misconfigured."
+  remediation: "Ensure Jenkins requires authentication for all endpoints. Restrict access to trusted network ranges and apply all security advisories."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /login
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Jenkins", "hudson"]
+        condition: or

@@ -1,0 +1,24 @@
+id: wordpress-user-enum-api
+info:
+  name: WordPress User Enumeration via REST API
+  severity: medium
+  tags: [wordpress, user-enumeration, rest-api, cms, info-disclosure]
+  description: "WordPress REST API exposes registered user accounts at /wp-json/wp/v2/users, allowing unauthenticated enumeration of usernames and IDs."
+  remediation: "Restrict the users endpoint via a plugin or custom code. Remove author enumeration from REST API responses for unauthenticated users."
+  cwe: "CWE-200"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /wp-json/wp/v2/users
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["slug", "link", "avatar_urls"]
+        part: body
+        condition: and
+      - type: regex
+        regex: ["\"id\":\\s*[0-9]+"]
+        part: body

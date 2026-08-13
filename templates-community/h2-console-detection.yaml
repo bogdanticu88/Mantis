@@ -1,0 +1,33 @@
+id: h2-console-detection
+info:
+  name: H2 Database Web Console Exposure
+  severity: high
+  tags: [h2, h2-database, detection, developer-tools, database, java, admin-panel]
+  description: "Detects an exposed H2 database web console. H2 is an in-memory Java database often used in Spring Boot development. When the console is enabled in production, unauthenticated or weakly authenticated access can lead to full JDBC-based RCE via INIT= payloads in the JDBC URL."
+  remediation: "Disable the H2 console in production (spring.h2.console.enabled=false), restrict to localhost only, and never expose development datasources to production traffic."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /h2-console
+      - /h2-console/
+      - /h2-console/login.jsp
+      - /console
+      - /console/
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["H2 Console", "H2 Database", "h2-console"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["<title>H2 Console", "h2database\\.com", "input[^>]+name=\"url\"", "JDBC URL", "H2\\s+[0-9]+\\.[0-9]"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 256"

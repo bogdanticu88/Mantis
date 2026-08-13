@@ -1,0 +1,31 @@
+id: php-error-log-exposure
+info:
+  name: PHP Error Log Exposure
+  severity: high
+  tags: [php, log-exposure, error-log, misconfiguration]
+  description: "Detects publicly accessible PHP error log files that may contain sensitive application internals, file paths, and stack traces."
+  remediation: "Move log files outside the web root or restrict access via server configuration. Disable display_errors in production php.ini."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /php_errors.log
+      - /error_log
+      - /error.log
+      - /php_error.log
+      - /phperrors.log
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "PHP (Warning|Parse error|Fatal error|Notice|Deprecated):"
+          - "\\[\\d{2}-[A-Za-z]{3}-\\d{4}"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 64"

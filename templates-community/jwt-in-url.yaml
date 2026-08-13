@@ -1,0 +1,31 @@
+id: jwt-in-url
+info:
+  name: JWT Token Accepted via URL Query Parameter
+  severity: high
+  tags: [jwt, token-exposure, authentication, auth-jwt-misconfig]
+  description: "Detects APIs that accept JWT tokens in URL query parameters. This exposes tokens in server access logs, browser history, proxy logs, and HTTP Referer headers."
+  remediation: "Accept authentication tokens only in the Authorization header or a Secure/HttpOnly cookie. Never accept tokens in URL parameters."
+  cwe: "CWE-598"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    paths:
+      - "/api/user?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4ts"
+      - "/api/me?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4ts"
+      - "/api/profile?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4ts"
+      - "/api/v1/user?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4ts"
+      - "/api/v1/me?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4ts"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 201]
+      - type: regex
+        regex: ["\"(id|user|email|sub|name|role)\"\\s*:"]
+        part: body
+      - type: word
+        words: ["Unauthorized", "Invalid token", "401"]
+        part: body
+        condition: or
+        negative: true

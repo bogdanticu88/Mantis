@@ -1,0 +1,22 @@
+id: tomcat-default-creds
+info:
+  name: Apache Tomcat Manager Default Credentials
+  severity: critical
+  tags: [default-creds, tomcat, auth, java]
+  description: "The Tomcat Manager application accepted a default credential pair (tomcat:tomcat or admin:admin). Manager access enables arbitrary WAR file deployment, which is equivalent to remote code execution on the host."
+  remediation: "Remove or rename the manager and host-manager applications if not required. Replace default credentials with a strong randomly generated password and restrict Manager access to localhost or a VPN."
+  cwe: "CWE-1392"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: GET
+    path: /manager/html
+    headers:
+      Authorization: "Basic dG9tY2F0OnRvbWNhdA=="
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Tomcat Web Application Manager", "Manager App"]
+        condition: or

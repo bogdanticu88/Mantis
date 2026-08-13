@@ -1,0 +1,32 @@
+id: ssh-key-exposure
+info:
+  name: "SSH Private Key File Exposure"
+  severity: critical
+  tags: [ssh, credentials, private-key, cryptographic, exposure, config-file-exposures]
+  description: "Detects publicly accessible SSH private key files. Any system configured to accept the matching public key is trivially compromised once the private key is retrieved."
+  remediation: "Remove private keys from the web root immediately. Revoke them from all authorized_keys files on target systems. Generate new key pairs and distribute only public keys."
+  cwe: "CWE-312"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    paths:
+      - /.ssh/id_rsa
+      - /.ssh/id_ed25519
+      - /.ssh/id_dsa
+      - /.ssh/id_ecdsa
+      - /id_rsa
+      - /id_ed25519
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "BEGIN RSA PRIVATE KEY"
+          - "BEGIN OPENSSH PRIVATE KEY"
+          - "BEGIN DSA PRIVATE KEY"
+          - "BEGIN EC PRIVATE KEY"
+        part: body
+        condition: or

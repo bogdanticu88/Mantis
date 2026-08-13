@@ -1,0 +1,18 @@
+id: host-header-injection
+info:
+  name: Host Header Injection
+  severity: medium
+  tags: [injection, host-header, ssrf]
+  description: "The application reflects the X-Forwarded-Host or Host header value in its response without validation. Attackers can exploit this to poison password-reset links, cache entries, or generate URLs pointing to attacker-controlled infrastructure."
+  remediation: "Build absolute URLs from a configured base URL, never from the Host or X-Forwarded-Host header directly. If forwarded headers are required, maintain an explicit allowlist of permitted values."
+  cwe: "CWE-20"
+  owasp: "A03:2021-Injection"
+
+requests:
+  - method: GET
+    path: /
+    headers:
+      X-Forwarded-Host: "mantis-hhinjection.invalid"
+    matchers:
+      - type: word
+        words: ["mantis-hhinjection.invalid"]

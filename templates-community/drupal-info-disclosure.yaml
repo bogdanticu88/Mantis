@@ -1,0 +1,37 @@
+id: drupal-info-disclosure
+info:
+  name: Drupal Version Disclosure via Text Files
+  severity: info
+  tags: [drupal, cms, disclosure, fingerprint, detection, version]
+  description: "Drupal changelog and installation text files are publicly accessible, revealing the exact version number installed. This enables targeted exploitation of Drupalgeddon (SA-CORE-2014-005) and similar version-specific CVEs."
+  remediation: "Configure the web server to deny access to CHANGELOG.txt, INSTALL.txt, UPGRADE.txt, and similar files in the Drupal root directory."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /CHANGELOG.txt
+      - /INSTALL.txt
+      - /core/CHANGELOG.txt
+      - /INSTALL.mysql.txt
+      - /INSTALL.pgsql.txt
+      - /UPGRADE.txt
+      - /core/INSTALL.txt
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Drupal"]
+        part: body
+      - type: regex
+        regex: ['Drupal [0-9]+\.[0-9]']
+        part: body
+
+    extractors:
+      - type: regex
+        name: drupal_version
+        regex: 'Drupal ([0-9]+\.[0-9]+\.?[0-9]*)'
+        group: 1

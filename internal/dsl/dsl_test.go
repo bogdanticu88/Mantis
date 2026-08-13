@@ -96,3 +96,83 @@ func TestEval_NonBoolResult(t *testing.T) {
 		t.Fatal("expected an error evaluating a non-boolean expression as a matcher")
 	}
 }
+
+func TestNewDSLFunctions(t *testing.T) {
+	e := env()
+
+	cases := []struct {
+		name string
+		expr string
+		want bool
+	}{
+		// base64
+		{"base64_encode round-trips", `base64_encode('hello') == "aGVsbG8="`, true},
+		{"base64_decode round-trips", `base64_decode("aGVsbG8=") == "hello"`, true},
+		{"base64 detect in body", `contains(base64_decode("aGVsbG8gd29ybGQ="), "hello world")`, true},
+
+		// url encoding
+		{"url_encode spaces", `url_encode("hello world") == "hello+world"`, true},
+		{"url_decode", `url_decode("hello+world") == "hello world"`, true},
+		{"url_encode special chars", `contains(url_encode("a=b&c"), "%3D")`, true},
+
+		// hex
+		{"hex_encode", `hex_encode("ab") == "6162"`, true},
+		{"hex_decode", `hex_decode("6162") == "ab"`, true},
+		{"hex round-trip", `hex_decode(hex_encode("secret")) == "secret"`, true},
+
+		// string manipulation
+		{"trim removes whitespace", `trim("  hello  ") == "hello"`, true},
+		{"trim no-op on clean string", `trim("clean") == "clean"`, true},
+		{"replace substitutes all", `replace("aaa", "a", "b") == "bbb"`, true},
+		{"replace first only", `replace("hello world", "o", "0") == "hell0 w0rld"`, true},
+
+		// split
+		{"split gets element", `split("a,b,c", ",", 0) == "a"`, true},
+		{"split middle element", `split("a,b,c", ",", 1) == "b"`, true},
+		{"split last element", `split("a,b,c", ",", 2) == "c"`, true},
+		{"split out of range returns empty", `split("a,b", ",", 5) == ""`, true},
+
+		// rand_str - just check length
+		{"rand_str length", `len(rand_str(16)) == 16`, true},
+		{"rand_str length 1", `len(rand_str(1)) == 1`, true},
+
+		// composed expressions
+		{"base64 header check pattern", `contains(base64_decode("aGVsbG8gd29ybGQ="), body)`, true},
+		{"hex in contains", `contains(body, hex_decode("68656c6c6f"))`, true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := EvalBool(c.expr, e)
+			if err != nil {
+				t.Fatalf("EvalBool(%q) error: %v", c.expr, err)
+			}
+			if got != c.want {
+				t.Errorf("EvalBool(%q) = %v, want %v", c.expr, got, c.want)
+			}
+		})
+	}
+}
+
+func TestNewDSLFunctions_Errors(t *testing.T) {
+	e := env()
+	cases := []struct {
+		name string
+		expr string
+	}{
+		{"base64_decode invalid input", `base64_decode("not-valid-base64!!!")  == "x"`},
+		{"hex_decode invalid input", `hex_decode("zz") == "x"`},
+		{"url_decode malformed percent", `url_decode("%GG") == "x"`},
+		{"rand_str zero length", `rand_str(0) == ""`},
+		{"split wrong argc", `split("a,b") == "a"`},
+		{"replace wrong argc", `replace("a", "b") == "c"`},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if _, err := EvalBool(c.expr, e); err == nil {
+				t.Errorf("EvalBool(%q) expected an error, got nil", c.expr)
+			}
+		})
+	}
+}

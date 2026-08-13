@@ -1,0 +1,28 @@
+id: graphql-batch-attack
+info:
+  name: GraphQL Batch Query Attack Vector
+  severity: medium
+  tags: [graphql, api, dos, batch, api-graphql-security]
+  description: "Sends an array of GraphQL queries in a single HTTP request. If the server accepts batched queries without rate limiting, it becomes a DDoS amplification vector where one HTTP request triggers N database queries."
+  remediation: "Disable query batching if not needed, or enforce per-request query limits and cost analysis."
+  cwe: "CWE-400"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: POST
+    path: /graphql
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+    body: '[{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"}]'
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "\\[\\s*\\{.*\"data\".*\\}\\s*,\\s*\\{.*\"data\".*\\}"
+          - "\\[\\{.*__typename.*\\},\\s*\\{.*__typename"
+        part: body
+        condition: or

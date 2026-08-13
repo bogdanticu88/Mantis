@@ -1,0 +1,39 @@
+id: api-without-rate-limit
+info:
+  name: Authentication Endpoint Missing Rate Limiting Headers
+  severity: medium
+  tags: [rate-limit, brute-force, credential-stuffing, authentication, auth-jwt-misconfig]
+  description: "Tests whether login and authentication endpoints return rate-limit response headers after a failed attempt. Absence of X-RateLimit-* or Retry-After headers suggests no brute-force protection is in place."
+  remediation: "Implement rate limiting on all authentication endpoints. Return X-RateLimit-Limit, X-RateLimit-Remaining, and Retry-After headers. Enforce account lockout or progressive delay after repeated failures."
+  cwe: "CWE-307"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: POST
+    paths:
+      - /api/v1/auth
+      - /api/v1/login
+      - /api/auth/login
+      - /api/login
+      - /auth/login
+      - /login
+      - /api/v1/token
+      - /oauth/token
+    headers:
+      Content-Type: "application/json"
+    body: '{"username":"test@example.com","password":"wrongpassword123"}'
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 400, 401, 403]
+      - type: word
+        words: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After", "X-Rate-Limit-Limit"]
+        part: header
+        condition: or
+        negative: true
+      - type: word
+        words: ["too many requests", "rate limit exceeded", "account locked", "too many attempts"]
+        part: body
+        condition: or
+        negative: true

@@ -3,7 +3,7 @@ package gate
 import (
 	"testing"
 
-	"mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 )
 
 func f(sev findings.Severity) findings.Finding {

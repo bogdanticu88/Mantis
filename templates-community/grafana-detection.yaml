@@ -1,0 +1,20 @@
+id: grafana-detection
+info:
+  name: Grafana Dashboard Detected
+  severity: info
+  tags: [tech, fingerprint, grafana, monitoring]
+  description: "A Grafana instance is accessible. Grafana dashboards often contain data source credentials and expose internal metrics."
+  remediation: "Restrict Grafana access to trusted networks. Disable anonymous access and enforce MFA for admin accounts."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /api/health
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["\"database\":\"ok\"", "grafana"]
+        condition: or

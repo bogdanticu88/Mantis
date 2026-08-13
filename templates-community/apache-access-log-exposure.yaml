@@ -1,0 +1,33 @@
+id: apache-access-log-exposure
+info:
+  name: Apache Access Log Exposure
+  severity: high
+  tags: [apache, log-exposure, access-log, misconfiguration, recon]
+  description: "Detects publicly readable Apache access logs. Access logs enumerate all requests to the server, disclosing IP addresses, request paths, user agents, and referrers that may include tokens or session IDs."
+  remediation: "Move log files to a directory not served by the web server, such as /var/log/apache2. Deny direct access to log paths in the virtual host configuration."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /logs/access.log
+      - /access.log
+      - /apache/logs/access.log
+      - /apache2/logs/access.log
+      - /log/access.log
+      - /log/access_log
+      - /logs/access_log
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "\"(GET|POST|PUT|DELETE|HEAD|OPTIONS) /"
+          - "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3} - - \\["
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 100"

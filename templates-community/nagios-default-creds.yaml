@@ -1,0 +1,30 @@
+id: nagios-default-creds
+info:
+  name: "Nagios Default Credentials (nagiosadmin:nagiosadmin)"
+  severity: critical
+  tags: [nagios, monitoring, default-credentials-extended, default-creds, network-monitoring]
+  description: "Nagios accepts the default nagiosadmin:nagiosadmin Basic auth credentials, granting access to the monitoring dashboard, host/service status, and CGI administration interfaces."
+  remediation: "Reset the nagiosadmin password via htpasswd on the passwd file. Consider replacing Basic auth with an SSO provider. Restrict the Nagios web directory to trusted source IPs."
+  cwe: "CWE-798"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: GET
+    paths:
+      - /nagios/
+      - /nagios/cgi-bin/status.cgi
+    headers:
+      Authorization: "Basic bmFnaW9zYWRtaW46bmFnaW9zYWRtaW4="
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Nagios Core", "Network Monitoring", "nagios"]
+        part: body
+        condition: or
+      - type: word
+        words: ["401 Unauthorized", "Authentication Required"]
+        part: body
+        condition: or
+        negative: true

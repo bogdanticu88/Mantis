@@ -1,0 +1,25 @@
+id: wordpress-cron-exposure
+info:
+  name: WordPress WP-Cron Publicly Accessible
+  severity: medium
+  tags: [wordpress, cms, misconfiguration, cron, dos]
+  description: "wp-cron.php is accessible without authentication. Repeated unauthenticated requests trigger scheduled tasks on every hit, enabling resource exhaustion denial-of-service."
+  remediation: "Set DISABLE_WP_CRON to true in wp-config.php and schedule cron tasks via the operating system scheduler instead."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /wp-cron.php
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: dsl
+        dsl: "content_length < 50"
+      - type: word
+        words: ["login", "forbidden", "access denied", "403"]
+        part: body
+        negative: true
+        condition: or

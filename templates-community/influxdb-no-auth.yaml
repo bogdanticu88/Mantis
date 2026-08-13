@@ -1,0 +1,25 @@
+id: influxdb-no-auth
+info:
+  name: "InfluxDB Unauthenticated Query Access"
+  severity: high
+  tags: [influxdb, timeseries, database, default-credentials-extended, misconfig]
+  description: "InfluxDB allows unauthenticated access to the query API, exposing database names, measurement schema, and time-series data without any credentials."
+  remediation: "Set auth-enabled = true in influxdb.conf. Create an admin user and enable HTTP authentication. Restrict port 8086 to trusted clients only."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - /query?db=_internal&q=SHOW+DATABASES
+      - /query?q=SHOW+DATABASES
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["results", "series", "databases"]
+        part: body
+        condition: and
+      - type: dsl
+        dsl: "content_length > 50"

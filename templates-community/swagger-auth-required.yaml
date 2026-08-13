@@ -1,0 +1,45 @@
+id: swagger-auth-required
+info:
+  name: Swagger UI or API Docs Accessible Without Authentication
+  severity: medium
+  tags: [swagger, openapi, api, exposure, documentation, api-graphql-security]
+  description: "API documentation endpoints (Swagger UI, api-docs JSON) accessible without authentication expose the full API surface, parameter schemas, and authentication mechanisms to unauthenticated users."
+  remediation: "Require authentication to access API documentation in production, or remove documentation endpoints entirely from internet-facing deployments."
+  cwe: "CWE-284"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - /api-docs
+      - /api-docs/
+      - /api/swagger.json
+      - /api/openapi.json
+      - /openapi.json
+      - /api/v1/swagger.json
+      - /api/v2/swagger.json
+      - /swagger-ui.html
+      - /swagger/index.html
+      - /swagger/v1/swagger.json
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "swagger"
+          - "openapi"
+          - "Swagger UI"
+          - "\"paths\""
+          - "\"info\""
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "401"
+          - "403"
+          - "Unauthorized"
+          - "Forbidden"
+        part: body
+        negative: true

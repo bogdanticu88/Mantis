@@ -27,7 +27,8 @@ func TestValidate_Rejections(t *testing.T) {
 		"invalid severity":       func(tpl *Template) { tpl.Info.Severity = "extremely-bad" },
 		"no requests":            func(tpl *Template) { tpl.Requests = nil },
 		"request missing method": func(tpl *Template) { tpl.Requests[0].Method = "" },
-		"request missing path":   func(tpl *Template) { tpl.Requests[0].Path = "" },
+		"request missing path":      func(tpl *Template) { tpl.Requests[0].Path = "" },
+		"request path and paths set": func(tpl *Template) { tpl.Requests[0].Paths = []string{"/a"} },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -37,6 +38,15 @@ func TestValidate_Rejections(t *testing.T) {
 				t.Errorf("%s: expected Validate() to fail, got nil", name)
 			}
 		})
+	}
+}
+
+func TestValidate_PathsField(t *testing.T) {
+	tpl := validTemplate()
+	tpl.Requests[0].Path = ""
+	tpl.Requests[0].Paths = []string{"/a", "/b", "/c"}
+	if err := tpl.Validate(); err != nil {
+		t.Errorf("template using paths instead of path should be valid: %v", err)
 	}
 }
 
@@ -58,6 +68,70 @@ func TestValidate_MatcherRejections(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidate_PayloadFields(t *testing.T) {
+	// Sniper with one set is valid.
+	t.Run("sniper one set", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Payloads = map[string][]string{"injection": {"'", "' OR 1=1--"}}
+		if err := tpl.Validate(); err != nil {
+			t.Errorf("sniper with one payload set should be valid: %v", err)
+		}
+	})
+
+	// Pitchfork with multiple sets is valid.
+	t.Run("pitchfork multiple sets", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Attack = "pitchfork"
+		tpl.Payloads = map[string][]string{
+			"user": {"admin", "guest"},
+			"pass": {"password", "letmein"},
+		}
+		if err := tpl.Validate(); err != nil {
+			t.Errorf("pitchfork with multiple payload sets should be valid: %v", err)
+		}
+	})
+
+	// Attack mode set without payloads is an error.
+	t.Run("attack without payloads", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Attack = "sniper"
+		if err := tpl.Validate(); err == nil {
+			t.Error("expected Validate() to fail when attack is set but no payloads are defined")
+		}
+	})
+
+	// Sniper with multiple sets is an error.
+	t.Run("sniper multiple sets", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Payloads = map[string][]string{
+			"set1": {"a"},
+			"set2": {"b"},
+		}
+		if err := tpl.Validate(); err == nil {
+			t.Error("expected Validate() to fail: sniper mode does not support multiple payload sets")
+		}
+	})
+
+	// Unknown attack mode is an error.
+	t.Run("unknown attack mode", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Attack = "cluster-bomb"
+		tpl.Payloads = map[string][]string{"x": {"a"}}
+		if err := tpl.Validate(); err == nil {
+			t.Error("expected Validate() to fail on unknown attack mode")
+		}
+	})
+
+	// Empty payload set is an error.
+	t.Run("empty payload set", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Payloads = map[string][]string{"injection": {}}
+		if err := tpl.Validate(); err == nil {
+			t.Error("expected Validate() to fail when a payload set has no values")
+		}
+	})
 }
 
 func TestValidate_ExtractorRejections(t *testing.T) {

@@ -1,0 +1,33 @@
+id: wordpress-readme-disclosure
+info:
+  name: WordPress Readme Version Disclosure
+  severity: info
+  tags: [wordpress, cms, disclosure, fingerprint, detection]
+  description: "WordPress readme.html or README.md is publicly accessible and exposes the installed version number, aiding targeted exploitation."
+  remediation: "Remove or restrict access to readme.html, README.md, and readme.txt on production sites via web server rules."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /readme.html
+      - /README.md
+      - /readme.txt
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["WordPress"]
+        part: body
+      - type: regex
+        regex: ['[Vv]ersion[: ]+[0-9]+\.[0-9]']
+        part: body
+
+    extractors:
+      - type: regex
+        name: wp_version
+        regex: '[Vv]ersion[: ]+([0-9]+\.[0-9]+\.?[0-9]*)'
+        group: 1

@@ -1,0 +1,26 @@
+id: zabbix-default-creds
+info:
+  name: "Zabbix Default Credentials (Admin:zabbix)"
+  severity: critical
+  tags: [zabbix, monitoring, default-credentials-extended, default-creds, network-monitoring]
+  description: "Zabbix accepts the default Admin:zabbix credentials, granting full administrative access to the monitoring platform, host configurations, alert rules, and agent commands."
+  remediation: "Change the Admin password on first login. Disable or rename default accounts. Enforce a strong password policy. Restrict login access to trusted IP ranges."
+  cwe: "CWE-798"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: POST
+    paths:
+      - /zabbix/index.php
+      - /index.php
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+    body: "name=Admin&password=zabbix&autologin=1&enter=Sign+in"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 302]
+      - type: word
+        words: ["zbx_session", "zbx_sessionid"]
+        part: header
+        condition: or

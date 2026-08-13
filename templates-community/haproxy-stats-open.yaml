@@ -1,0 +1,29 @@
+id: haproxy-stats-open
+info:
+  name: HAProxy Statistics Page Exposed Without Authentication
+  severity: medium
+  tags: [haproxy, load-balancer, devops, detection, stats, open-instance, no-auth]
+  description: "HAProxy statistics page is publicly accessible without authentication. Exposes backend server IP addresses, port numbers, active connection counts, session rates, and the full load balancer topology to unauthenticated callers."
+  remediation: "Restrict the stats URI to trusted source IPs using 'stats http-request deny unless { src 10.0.0.0/8 }'. Enable authentication with 'stats auth username:password'. Disable the stats page if not operationally required."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - "/haproxy?stats"
+      - /stats
+      - /haproxy-status
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Statistics Report for HAProxy", "HAProxy Statistics"]
+        part: body
+        condition: or
+      - type: word
+        words: ["Sessions", "Bytes", "frontend", "backend"]
+        part: body
+        condition: or

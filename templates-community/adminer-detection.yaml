@@ -1,0 +1,33 @@
+id: adminer-detection
+info:
+  name: Adminer Database Administration Interface Detection
+  severity: high
+  tags: [adminer, detection, developer-tools, database, admin-panel]
+  description: "Detects an exposed Adminer (formerly phpMinAdmin) database administration interface. Adminer provides full database management including query execution. Exposure allows attackers to attempt credential brute-force and, if successful, full database compromise."
+  remediation: "Remove Adminer from production, restrict by IP, require HTTP basic auth in addition to database credentials, and never expose to the public internet."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /adminer.php
+      - /adminer/adminer.php
+      - /adminer/
+      - /db/adminer.php
+      - /database/adminer.php
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Adminer", "adminer"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["<title>Adminer", "adminer\\.org", "class=\"login\"", "input[^>]+name=\"auth\\[driver\\]\""]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 512"

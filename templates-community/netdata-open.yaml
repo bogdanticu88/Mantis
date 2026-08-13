@@ -1,0 +1,25 @@
+id: netdata-open
+info:
+  name: "Netdata Monitoring API Unauthenticated Access"
+  severity: medium
+  tags: [netdata, monitoring, default-credentials-extended, misconfig, metrics]
+  description: "The Netdata API is accessible without authentication, exposing host system information including OS details, hostname, Netdata version, and real-time performance metrics."
+  remediation: "Enable Netdata authentication or place the agent behind a reverse proxy with access controls. Bind Netdata to localhost only if external access is not required."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /api/v1/info
+      - /api/v1/charts
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["netdata_version", "os_name", "hostname", "uid"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 200"

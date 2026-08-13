@@ -1,0 +1,31 @@
+id: application-properties-exposure
+info:
+  name: "Spring Boot Application Configuration Exposure"
+  severity: high
+  tags: [spring, java, springboot, config, credentials, exposure, config-file-exposures]
+  description: "Detects exposed Spring Boot application.properties or application.yml files that may contain datasource credentials, API keys, management endpoint configuration, and service URLs."
+  remediation: "Block web server access to application configuration files. Use Spring Cloud Config Server or environment variable injection for secrets rather than committing them to application.properties."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /application.properties
+      - /application.yml
+      - /config/application.properties
+      - /config/application.yml
+      - /src/main/resources/application.properties
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "spring.datasource"
+          - "server.port"
+          - "spring.security"
+          - "management.endpoints"
+        part: body
+        condition: or

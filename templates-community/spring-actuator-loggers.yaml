@@ -1,0 +1,24 @@
+id: spring-actuator-loggers
+info:
+  name: Spring Boot Actuator Loggers Endpoint Exposed
+  severity: medium
+  tags: [spring, spring-boot, actuator, java, detection, web-server-framework-detection, information-disclosure]
+  description: "The /actuator/loggers endpoint exposes logger names with configured and effective log levels, and accepts POST requests to change log verbosity at runtime. An attacker can enable TRACE logging to force the application to emit sensitive data, or read the endpoint to map internal package and class structure."
+  remediation: "Disable with management.endpoint.loggers.enabled=false or require authentication. Bind log-level management to an internal management port if runtime control is required."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /actuator/loggers
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['"loggers"']
+        part: body
+      - type: word
+        words: ['"configuredLevel"', '"effectiveLevel"']
+        part: body
+        condition: or

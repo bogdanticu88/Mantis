@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"mantis/internal/findings"
-	"mantis/internal/gate"
-	"mantis/internal/httpclient"
-	"mantis/internal/reporters"
-	"mantis/internal/templates"
+	"github.com/bogdanticu88/Mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/gate"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/reporters"
+	"github.com/bogdanticu88/Mantis/internal/templates"
 )
 
 func cmdScan(args []string) error {

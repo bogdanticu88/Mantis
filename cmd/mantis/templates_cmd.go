@@ -9,9 +9,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"mantis/internal/environments"
-	"mantis/internal/httpclient"
-	"mantis/internal/templates"
+	"github.com/bogdanticu88/Mantis/internal/environments"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/templates"
 )
 
 func cmdTemplates(args []string) error {

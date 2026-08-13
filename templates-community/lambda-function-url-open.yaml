@@ -1,0 +1,26 @@
+id: lambda-function-url-open
+info:
+  name: AWS Lambda Management API Accessible Without Authentication
+  severity: high
+  tags: [cloud, aws, lambda, serverless, misconfiguration, cloud-infrastructure]
+  description: "The AWS Lambda management API is accessible without authentication. This exposes function names, ARNs, runtimes, environment variable keys, and may allow unauthenticated function invocation or configuration changes."
+  remediation: "Restrict access to the Lambda API to authorized IAM principals using resource-based policies. Configure Lambda function URLs with IAM auth mode and require Signature Version 4 for all requests."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    paths:
+      - /2015-03-31/functions/
+      - /2015-03-31/functions
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["FunctionName"]
+        part: body
+      - type: word
+        words: ["FunctionArn", "Runtime", "Handler"]
+        part: body
+        condition: or

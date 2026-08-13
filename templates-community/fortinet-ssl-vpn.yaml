@@ -1,0 +1,24 @@
+id: fortinet-ssl-vpn
+info:
+  name: Fortinet FortiGate SSL VPN Login Exposed
+  severity: medium
+  tags: [fortinet, fortigate, vpn, ssl-vpn, network-admin-panels, firewall]
+  description: "Fortinet FortiGate SSL VPN login portal is publicly reachable. FortiGate SSL VPN has been the subject of critical CVEs (CVE-2018-13379, CVE-2022-42475) and is a frequent target for ransomware operators and nation-state actors."
+  remediation: "Apply all Fortinet security advisories immediately. Enable multi-factor authentication for VPN access. Restrict the portal to known source IPs where operationally feasible."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /remote/login
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["FortiGate", "Fortinet", "FortiToken", "fgt_lang", "SVPNCOOKIE"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 512"

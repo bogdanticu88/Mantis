@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
 func newVulnerableServer(t *testing.T) *httptest.Server {

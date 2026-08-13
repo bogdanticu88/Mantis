@@ -1,0 +1,35 @@
+id: api-key-in-response
+info:
+  name: API Keys or Secrets Leaked in Response Body
+  severity: high
+  tags: [api-key, secret-exposure, information-disclosure, aws, auth-jwt-misconfig]
+  description: "Scans common API and configuration endpoints for patterns matching AWS access keys, generic API keys, and secret tokens that should never appear in client-facing responses."
+  remediation: "Audit all API responses to ensure secrets and credentials are never serialized into output. Implement secret scanning in the CI/CD pipeline and rotate any exposed credentials immediately."
+  cwe: "CWE-312"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    paths:
+      - /api/v1/config
+      - /api/config
+      - /api/settings
+      - /api/v1/settings
+      - /config
+      - /settings
+      - /api/me
+      - /api/v1/user
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "AKIA[0-9A-Z]{16}"
+          - "(?i)(aws_access_key_id|aws_secret_access_key)[\\s=:\"']+[A-Za-z0-9/+]{16,}"
+          - "(?i)(api_key|apikey|api-key)[\\s=:\"']+[a-zA-Z0-9_\\-]{20,}"
+          - "(?i)(client_secret|app_secret)[\\s=:\"']+[a-zA-Z0-9_\\-]{16,}"
+          - "(?i)(password|passwd)[\\s=:\"']+[^\"'\\s]{8,}"
+        part: body
+        condition: or

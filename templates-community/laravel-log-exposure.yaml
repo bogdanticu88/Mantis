@@ -1,0 +1,31 @@
+id: laravel-log-exposure
+info:
+  name: Laravel Application Log Exposure
+  severity: high
+  tags: [laravel, php, log-exposure, framework, misconfiguration]
+  description: "Detects publicly accessible Laravel log files under /storage/logs/. These logs frequently contain exception stack traces, user data, database queries, and internal paths."
+  remediation: "Ensure the storage directory is not within the web-accessible public/ directory. Add /storage to .htaccess deny rules or equivalent nginx location blocks."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /storage/logs/laravel.log
+      - /storage/logs/laravel-2024.log
+      - /storage/logs/laravel-2025.log
+      - /storage/logs/laravel-2026.log
+      - /storage/logs/daily.log
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "\\[\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}"
+          - "(local\\.ERROR|production\\.ERROR|Stack trace:|\\[stacktrace\\]|Illuminate\\\\)"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 128"

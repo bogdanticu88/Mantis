@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"mantis/internal/dsl"
-	"mantis/internal/httpclient"
-	"mantis/internal/jsonpath"
-	"mantis/internal/templates"
+	"github.com/bogdanticu88/Mantis/internal/dsl"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/jsonpath"
+	"github.com/bogdanticu88/Mantis/internal/templates"
 )
 
 type StepResult struct {

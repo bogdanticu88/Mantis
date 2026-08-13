@@ -1,0 +1,24 @@
+id: wordpress-xmlrpc-enabled
+info:
+  name: WordPress XML-RPC Enabled
+  severity: medium
+  tags: [wordpress, xmlrpc, cms, misconfig]
+  description: "WordPress XML-RPC endpoint is enabled and responds to method calls. This can be abused for brute-force amplification, SSRF, and content enumeration."
+  remediation: "Disable XML-RPC via plugin or by blocking /xmlrpc.php at the web server level unless explicitly required."
+  cwe: "CWE-749"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: POST
+    path: /xmlrpc.php
+    headers:
+      Content-Type: "text/xml"
+    body: "<?xml version=\"1.0\" encoding=\"utf-8\"?><methodCall><methodName>system.listMethods</methodName><params></params></methodCall>"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["<?xml", "methodResponse", "system.listMethods"]
+        part: body
+        condition: and

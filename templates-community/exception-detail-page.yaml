@@ -1,0 +1,37 @@
+id: exception-detail-page
+info:
+  name: Exception Detail Page Exposure
+  severity: high
+  tags: [exception, stack-trace, log-exposure, java, python, php, recon]
+  description: "Detects application error endpoints that return verbose exception details including stack traces, class names, file paths, and line numbers. Present across Java, Python, PHP, and .NET stacks."
+  remediation: "Configure a generic error handler for all unhandled exceptions in production. Never render exception details to end users. Log stack traces server-side only."
+  cwe: "CWE-209"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /error
+      - /exception
+      - /trace
+      - /errors
+      - /error.html
+      - /exception.html
+      - /500
+      - /500.html
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 500]
+      - type: regex
+        regex:
+          - "at [a-zA-Z0-9_\\.\\$]+\\([a-zA-Z0-9_]+\\.java:\\d+\\)"
+          - "Traceback \\(most recent call last\\)"
+          - "PHP (Fatal error|Parse error|Warning):"
+          - "System\\.Web\\.HttpUnhandledException"
+          - "Microsoft\\.AspNet"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 256"

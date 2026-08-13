@@ -1,0 +1,29 @@
+id: artifactory-detection
+info:
+  name: JFrog Artifactory Login Panel Detected
+  severity: info
+  tags: [artifactory, jfrog, repository, devops, detection, login-panel, artifact-management]
+  description: "JFrog Artifactory artifact repository manager login page is publicly accessible. Artifactory manages build artifacts, Docker images, npm, Maven, PyPI, and Helm repositories."
+  remediation: "Restrict Artifactory to authorized networks. Ensure all repository access requires authentication and disable anonymous access to sensitive repositories."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /ui/login
+      - /artifactory/webapp/
+      - /
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Artifactory", "JFrog"]
+        part: body
+        condition: or
+      - type: word
+        words: ["login", "username", "sign in", "Sign In"]
+        part: body
+        condition: or

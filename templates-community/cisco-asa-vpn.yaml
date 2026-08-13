@@ -1,0 +1,26 @@
+id: cisco-asa-vpn
+info:
+  name: Cisco ASA SSL VPN Login Portal Exposed
+  severity: medium
+  tags: [cisco, asa, vpn, ssl-vpn, network-admin-panels, firewall]
+  description: "Cisco ASA SSL VPN (WebVPN) login portal is publicly reachable. Exposed VPN endpoints are actively targeted for credential stuffing and are vulnerable to CVEs such as CVE-2023-20269 and related ASA WebVPN issues."
+  remediation: "Restrict VPN portal access to known source IPs where feasible. Enable multi-factor authentication. Apply Cisco security advisories and keep ASA software current. Monitor for credential stuffing in auth logs."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /+CSCOE+/logon.html
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["webvpn_logon_form", "SSL VPN", "Cisco", "CSCOE", "csco_logo"]
+        part: body
+        condition: or
+      - type: word
+        words: ["username", "password"]
+        part: body
+        condition: and

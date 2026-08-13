@@ -1,0 +1,34 @@
+id: crossdomain-xml-wildcard
+info:
+  name: Cross-Domain Policy Wildcard Misconfiguration
+  severity: medium
+  tags: [crossdomain, flash, silverlight, cors, misconfiguration, miscellaneous-security]
+  description: "crossdomain.xml or clientaccesspolicy.xml permits access from any origin (*). Flash and Silverlight clients can read credentialed responses from this domain across origins, enabling cross-origin data theft."
+  remediation: "Replace wildcard entries with an explicit list of trusted domains. Remove the policy file entirely if Flash/Silverlight support is no longer required."
+  cwe: "CWE-942"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /crossdomain.xml
+      - /clientaccesspolicy.xml
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "cross-domain-policy"
+          - "cross-domain-access"
+          - "allow-access-from"
+          - "allow-from"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - 'domain="*"'
+          - "uri=\"*\""
+        part: body
+        condition: or

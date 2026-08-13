@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"mantis/internal/dsl"
-	"mantis/internal/httpclient"
-	"mantis/internal/jsonpath"
+	"github.com/bogdanticu88/Mantis/internal/dsl"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/jsonpath"
 )
 
 type matchResult struct {

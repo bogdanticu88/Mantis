@@ -1,0 +1,18 @@
+id: php-version-header
+info:
+  name: PHP Version Disclosed via Response Header
+  severity: info
+  tags: [php, detection, web-server-framework-detection, information-disclosure, header]
+  description: "The X-Powered-By or Server response header discloses the PHP version string, enabling targeted exploitation of version-specific CVEs and informed patch-gap analysis."
+  remediation: "Set expose_php = Off in php.ini. Strip the X-Powered-By header server-side using header_remove() in PHP, or via proxy-level response header filtering."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers-condition: and
+    matchers:
+      - type: word
+        words: ['PHP/']
+        part: header

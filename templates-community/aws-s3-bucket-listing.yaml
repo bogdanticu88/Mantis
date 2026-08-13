@@ -1,0 +1,27 @@
+id: aws-s3-bucket-listing
+info:
+  name: AWS S3 Bucket Public Listing Enabled
+  severity: high
+  tags: [cloud, aws, s3, bucket, listing, misconfiguration, cloud-infrastructure]
+  description: "An AWS S3 bucket allows unauthenticated listing of its contents. All object keys and metadata are visible to anyone, which may expose sensitive files and data paths."
+  remediation: "Enable S3 Block Public Access at the account and bucket level. Remove any bucket policy or ACL entries granting s3:ListBucket to anonymous principals."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /?list-type=2
+      - /?delimiter=/
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["<ListBucketResult"]
+        part: body
+      - type: word
+        words: ["amazonaws.com", "<Contents>", "<Key>"]
+        part: body
+        condition: or

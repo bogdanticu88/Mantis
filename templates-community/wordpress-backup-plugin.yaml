@@ -1,0 +1,31 @@
+id: wordpress-backup-plugin
+info:
+  name: WordPress Backup Archive Publicly Accessible
+  severity: high
+  tags: [wordpress, backup, exposure, cms, miscellaneous-security]
+  description: "Backup archives produced by WordPress backup plugins are reachable in the uploads or plugins directory. These archives typically contain a full database dump and all site files, giving an attacker complete access to credentials and content."
+  remediation: "Store backup archives outside the webroot or in a private cloud bucket. Protect backup directories with authentication. Prefer plugins that never write archives to publicly accessible paths."
+  cwe: "CWE-552"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /wp-content/uploads/backupwordpress/
+      - /wp-content/uploads/backup-by-supsystic/
+      - /wp-content/uploads/backups/
+      - /wp-content/uploads/wp-backup/
+      - /wp-content/plugins/backup/backups/
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "Index of"
+          - ".zip"
+          - ".sql"
+          - ".tar.gz"
+          - "backup"
+        part: body
+        condition: or

@@ -1,0 +1,29 @@
+id: spring-actuator-heapdump
+info:
+  name: Spring Boot Actuator Heap Dump Endpoint Exposed
+  severity: high
+  tags: [spring-boot, actuator, heapdump, information-disclosure, java, auth-jwt-misconfig]
+  description: "Tests whether the Spring Boot actuator heapdump endpoint is publicly reachable. A successful download provides a full JVM heap dump containing in-memory secrets, session tokens, credentials, and application data."
+  remediation: "Disable the heapdump endpoint or restrict it to localhost only. Require authentication for all actuator endpoints via Spring Security configuration."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /actuator/heapdump
+      - /actuator/heapdump.hprof
+      - /heapdump
+      - /manage/heapdump
+      - /app/actuator/heapdump
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["application/octet-stream", "application/x-hprof", "application/octet"]
+        part: header
+        condition: or
+      - type: dsl
+        dsl: "content_length > 1024"

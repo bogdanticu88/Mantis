@@ -1,0 +1,20 @@
+id: prometheus-open
+info:
+  name: Prometheus Metrics Endpoint Exposed Without Authentication
+  severity: high
+  tags: [exposure, prometheus, monitoring, auth]
+  description: "The Prometheus /metrics endpoint is accessible without authentication, leaking application internals: request counts, error rates, database pool sizes, JVM heap usage, and any custom metrics that encode business or infrastructure data."
+  remediation: "Place Prometheus behind a reverse proxy that enforces authentication. Bind the metrics endpoint to a loopback or VPN interface rather than a public NIC."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /metrics
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["# HELP", "# TYPE"]
+        condition: and

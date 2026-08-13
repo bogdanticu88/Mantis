@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"mantis/internal/environments"
-	"mantis/internal/httpclient"
-	"mantis/internal/reporters"
+	"github.com/bogdanticu88/Mantis/internal/environments"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/reporters"
 )
 
 // splitArgs partitions args into flag tokens and positional tokens so a

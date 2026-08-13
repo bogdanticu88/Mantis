@@ -1,0 +1,17 @@
+id: nodejs-express-detection
+info:
+  name: Node.js Express Framework Detection via Response Header
+  severity: info
+  tags: [nodejs, express, javascript, detection, web-server-framework-detection, information-disclosure, header]
+  description: "The X-Powered-By: Express response header discloses the application is built on Node.js with Express, enabling targeted research into Express-specific vulnerabilities, middleware weaknesses, and known CVEs for the exposed stack."
+  remediation: "Call app.disable('x-powered-by') in the Express application setup, or use the helmet middleware which removes this header by default."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl: "contains(to_lower(headers), 'x-powered-by: express')"

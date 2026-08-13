@@ -1,0 +1,22 @@
+id: spring-actuator-mappings
+info:
+  name: Spring Boot Actuator Mappings Endpoint Exposed
+  severity: medium
+  tags: [spring, spring-boot, actuator, java, detection, web-server-framework-detection, information-disclosure]
+  description: "The /actuator/mappings endpoint lists all registered HTTP request mappings including URL patterns, HTTP methods, and handler class names. This provides a complete API surface map that enables targeted probing of internal routes and filter chains."
+  remediation: "Disable with management.endpoint.mappings.enabled=false or require authentication before any actuator access."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /actuator/mappings
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['"mappings"']
+        part: body
+      - type: dsl
+        dsl: "content_length > 256"

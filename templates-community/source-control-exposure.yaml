@@ -1,0 +1,30 @@
+id: source-control-exposure
+info:
+  name: Source Control Metadata Exposed
+  severity: high
+  tags: [exposure, source-disclosure, git, svn]
+  description: "Version control metadata is publicly accessible, potentially allowing reconstruction of the full source tree, history, and any secrets committed to the repository."
+  remediation: "Block access to version control directories (.svn, .hg, .bzr, CVS) at the web server. Ensure these directories are never deployed into the web root, and audit existing deployments with a deny rule for dotfiles."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /.svn/entries
+      - /.svn/wc.db
+      - /.hg/hgrc
+      - /.bzr/README
+      - /CVS/Root
+      - /CVS/Entries
+      - /.git/HEAD
+      - /.git/FETCH_HEAD
+      - /.git/refs/heads/main
+      - /.git/refs/heads/master
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["svn", "hg", "Bazaar", "CVS", "ref:", "FETCH_HEAD", "HEAD"]
+        condition: or

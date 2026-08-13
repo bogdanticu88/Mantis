@@ -1,0 +1,25 @@
+id: portainer-default
+info:
+  name: "Portainer Default Admin Credentials (admin:admin)"
+  severity: critical
+  tags: [portainer, docker, container, default-credentials-extended, default-creds]
+  description: "Portainer accepts the factory-default admin:admin credentials, granting full control over all managed Docker environments, container lifecycle, images, networks, and volumes."
+  remediation: "Change the admin password on first login or immediately via the Portainer API. Enable 2FA. Restrict access to the Portainer port at the network perimeter."
+  cwe: "CWE-798"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: POST
+    path: /api/auth
+    headers:
+      Content-Type: "application/json"
+    body: '{"Username":"admin","Password":"admin"}'
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["jwt"]
+        part: body
+      - type: dsl
+        dsl: "content_length > 50"

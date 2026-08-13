@@ -1,0 +1,27 @@
+id: vault-ui-detection
+info:
+  name: HashiCorp Vault UI Login Panel Detected
+  severity: info
+  tags: [vault, hashicorp, secrets-management, devops, detection, login-panel]
+  description: "HashiCorp Vault web UI login page is publicly reachable. Vault manages secrets, credentials, and PKI infrastructure. Its exposure reveals the secrets management attack surface to potential attackers."
+  remediation: "Set 'ui = false' in Vault configuration if the UI is not operationally required. Restrict access to authorized networks only."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /ui/
+      - /ui/vault/auth
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Vault"]
+        part: body
+      - type: word
+        words: ["HashiCorp", "vault-logo", "vault-ui", "Sign in to Vault"]
+        part: body
+        condition: or

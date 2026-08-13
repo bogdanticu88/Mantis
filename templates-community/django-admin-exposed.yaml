@@ -1,0 +1,21 @@
+id: django-admin-exposed
+info:
+  name: Django Admin Interface Exposed
+  severity: medium
+  tags: [django, python, admin, info-disclosure, framework]
+  description: "The Django admin interface is publicly accessible. While authentication is required, exposing the admin panel increases attack surface for credential brute-force, username enumeration, and exploiting future admin vulnerabilities."
+  remediation: "Change the admin URL from the default /admin/ to an unpredictable path. Restrict access by IP. Consider disabling the admin interface in production if not required."
+  cwe: "CWE-552"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /admin/
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Django administration", "csrfmiddlewaretoken", "Log in | Django site admin"]
+        part: body
+        condition: or

@@ -1,0 +1,35 @@
+id: basic-auth-over-http
+info:
+  name: Basic Authentication Accepts Weak Default Credentials
+  severity: high
+  tags: [basic-auth, authentication, weak-credentials, default-creds, auth-jwt-misconfig]
+  description: "Tests whether admin and API endpoints accept Basic authentication with default credentials (test:test). A successful response indicates absent or trivially bypassable access controls."
+  remediation: "Remove all default credentials. Enforce strong authentication. Ensure Basic auth is only permitted over TLS and rejects any credentials not provisioned for the user."
+  cwe: "CWE-521"
+  owasp: "A07:2021-Identification and Authentication Failures"
+
+requests:
+  - method: GET
+    paths:
+      - /admin/
+      - /admin
+      - /api/
+      - /api/v1/
+      - /management/
+      - /manage/
+    headers:
+      Authorization: "Basic dGVzdDp0ZXN0"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 201]
+      - type: word
+        words: ["Unauthorized", "401", "403", "Forbidden", "WWW-Authenticate"]
+        part: header
+        condition: or
+        negative: true
+      - type: word
+        words: ["dashboard", "admin", "management", "welcome", "logout", "settings", "panel", "console"]
+        part: body
+        condition: or

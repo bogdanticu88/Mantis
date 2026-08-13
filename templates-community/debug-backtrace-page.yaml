@@ -1,0 +1,41 @@
+id: debug-backtrace-page
+info:
+  name: Debug Information and Backtrace Page Exposure
+  severity: high
+  tags: [debug, phpinfo, server-status, information-disclosure, misconfiguration, recon]
+  description: "Detects debug endpoints and diagnostic pages such as phpinfo(), Apache server-status, and application debug routes that expose configuration details, environment variables, loaded modules, and request internals."
+  remediation: "Remove or restrict all debug endpoints in production. Disable phpinfo() calls. Protect server-status with IP allowlisting. Set DEBUG=False in all production environments."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /debug
+      - /debuginfo
+      - /phpinfo
+      - /phpinfo.php
+      - /info.php
+      - /test.php
+      - /server-status
+      - /server-info
+      - /_debug
+      - /debug/default/view
+      - /debug/pprof
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "<title>phpinfo\\(\\)</title>"
+          - "PHP Version [\\d\\.]+"
+          - "Apache Server Status for"
+          - "(SERVER_SOFTWARE|DOCUMENT_ROOT|PATH_INFO|SCRIPT_FILENAME)"
+          - "(DEBUG|debug).*=.*(True|true|1|enabled)"
+          - "Xdebug v[\\d\\.]+"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 256"

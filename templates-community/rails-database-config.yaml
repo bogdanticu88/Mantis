@@ -1,0 +1,28 @@
+id: rails-database-config
+info:
+  name: "Ruby on Rails Database Configuration Exposure"
+  severity: high
+  tags: [rails, ruby, config, database, credentials, exposure, config-file-exposures]
+  description: "Detects exposed Rails database.yml files containing database adapter settings, hostnames, and potentially plaintext credentials for development, test, and production environments."
+  remediation: "Block web server access to the /config directory. Use Rails encrypted credentials or environment variable references in database.yml rather than plaintext passwords."
+  cwe: "CWE-538"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /config/database.yml
+      - /database.yml
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "adapter:"
+          - "password:"
+          - "database:"
+          - "username:"
+        part: body
+        condition: or

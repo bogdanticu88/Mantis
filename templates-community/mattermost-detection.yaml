@@ -1,0 +1,43 @@
+id: mattermost-detection
+info:
+  name: Mattermost Team Messaging Detection
+  severity: info
+  tags: [mattermost, detection, developer-tools, messaging, collaboration]
+  description: "Detects an exposed Mattermost instance. Mattermost is a self-hosted team messaging platform. Open sign-up or misconfigured team settings can allow unauthorized access to internal communications."
+  remediation: "Disable open team sign-up, restrict email domains for registration, and enforce MFA."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /login
+      - /signup_email
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Mattermost", "mattermost"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["Mattermost", "mm-[a-z]+-container", "channel_header", "mattermost\\.com"]
+        part: body
+        condition: or
+
+  - method: GET
+    path: /api/v4/system/ping
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["status", "OK"]
+        part: body
+        condition: and
+      - type: regex
+        regex: ["\"status\":\\s*\"OK\""]
+        part: body

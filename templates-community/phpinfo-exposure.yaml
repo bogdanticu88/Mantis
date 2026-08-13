@@ -1,0 +1,31 @@
+id: phpinfo-exposure
+info:
+  name: "PHP Info Page Exposure"
+  severity: medium
+  tags: [php, disclosure, fingerprint, config-file-exposures]
+  description: "Detects publicly accessible phpinfo() output pages that reveal PHP version, loaded extensions, environment variables, and full server configuration. This data materially aids attacker reconnaissance."
+  remediation: "Delete phpinfo() files from production. Disable the function via disable_functions in php.ini and restrict access to diagnostic endpoints."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /phpinfo.php
+      - /info.php
+      - /php.php
+      - /test.php
+      - /php_info.php
+      - /phpi.php
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "PHP Version"
+          - "phpinfo()"
+          - "PHP Extension Build"
+        part: body
+        condition: or

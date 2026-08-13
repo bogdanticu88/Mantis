@@ -1,0 +1,23 @@
+id: digitalocean-metadata
+info:
+  name: DigitalOcean Droplet Metadata Service Accessible
+  severity: high
+  tags: [cloud, digitalocean, metadata, imds, cloud-infrastructure]
+  description: "The DigitalOcean droplet metadata endpoint is accessible. This exposes droplet ID, region, SSH keys, network interface configuration, and user-data scripts."
+  remediation: "Add an iptables rule on the droplet to block application-user requests to 169.254.169.254. Audit user-data scripts for embedded secrets before use."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - http://169.254.169.254/metadata/v1/
+      - http://169.254.169.254/metadata/v1.json
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["droplet_id", "interfaces"]
+        part: body
+        condition: or

@@ -1,0 +1,25 @@
+id: hadoop-yarn-open
+info:
+  name: "Hadoop YARN ResourceManager API Unauthenticated Access"
+  severity: high
+  tags: [hadoop, yarn, default-credentials-extended, misconfig, big-data]
+  description: "The YARN ResourceManager REST API is accessible without authentication, exposing cluster topology, running application data, and node manager addresses."
+  remediation: "Enable Kerberos authentication on YARN. Set yarn.acl.enable=true and configure yarn.admin.acl in yarn-site.xml. Restrict port 8088 at the network perimeter."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /ws/v1/cluster/info
+      - /ws/v1/cluster/apps
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["clusterInfo", "resourceManagerVersion", "haState", "totalNodes"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 100"

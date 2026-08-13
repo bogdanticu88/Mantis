@@ -1,0 +1,26 @@
+id: juniper-ssl-vpn
+info:
+  name: Juniper/Pulse Secure SSL VPN Portal Exposed
+  severity: medium
+  tags: [juniper, pulse-secure, ivanti, vpn, ssl-vpn, network-admin-panels]
+  description: "Juniper Networks or Pulse Secure (now Ivanti Connect Secure) SSL VPN portal is publicly reachable. These products have accumulated critical CVEs including CVE-2019-11510 and CVE-2021-22893, enabling unauthenticated credential and key theft."
+  remediation: "Apply all vendor security advisories. Enforce multi-factor authentication. Restrict portal access to known source IPs. Review logs for signs of past exploitation given the history of actively exploited CVEs."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /dana-na/auth/url_default/welcome.cgi
+      - /dana-na/auth/saml-endpoint.cgi
+      - /dana-na/auth/url_default/login.cgi
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Pulse Secure", "Juniper Networks", "dana-na", "NC.jnlp", "DSLaunchURL", "Ivanti Connect"]
+        part: body
+        condition: or

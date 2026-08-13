@@ -1,0 +1,22 @@
+id: wordpress-license-disclosure
+info:
+  name: WordPress License File Publicly Accessible
+  severity: info
+  tags: [wordpress, cms, disclosure, fingerprint]
+  description: "The WordPress license.txt file is publicly accessible, confirming a WordPress installation to unauthenticated users."
+  remediation: "Restrict access to license.txt via web server configuration rules or remove the file from the web root."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /license.txt
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["WordPress", "GNU General Public License"]
+        part: body
+        condition: and

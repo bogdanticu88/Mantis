@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"mantis/internal/findings"
-	"mantis/internal/httpclient"
-	"mantis/internal/templates"
+	"github.com/bogdanticu88/Mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/templates"
 )
 
 var safeMethods = map[string]bool{"GET": true, "HEAD": true, "OPTIONS": true}

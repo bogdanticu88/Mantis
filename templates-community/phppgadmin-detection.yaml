@@ -1,0 +1,33 @@
+id: phppgadmin-detection
+info:
+  name: phpPgAdmin PostgreSQL Administration Interface Detection
+  severity: high
+  tags: [phppgadmin, detection, developer-tools, database, postgresql, admin-panel]
+  description: "Detects an exposed phpPgAdmin instance, a web-based PostgreSQL administration tool. Exposure allows attackers to attempt authentication against PostgreSQL directly via the browser and can lead to full database compromise."
+  remediation: "Restrict phpPgAdmin to localhost or VPN-only access, disable the 'extra_login_security' bypass, and enforce HTTP authentication in addition to PostgreSQL credentials."
+  cwe: "CWE-306"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /phppgadmin/
+      - /phppgadmin/index.php
+      - /phpPgAdmin/
+      - /pgsql/
+      - /db/phppgadmin/
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["phpPgAdmin", "phppgadmin"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["<title>phpPgAdmin", "phppgadmin\\.sourceforge", "PostgreSQL", "class=\"trail\"", "Servers</a>"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 512"

@@ -1,0 +1,28 @@
+id: zabbix-detection
+info:
+  name: Zabbix Network Monitoring Login Page Detected
+  severity: info
+  tags: [zabbix, monitoring, devops, detection, login-panel]
+  description: "Zabbix network monitoring platform login page is publicly accessible. Reveals the presence of Zabbix infrastructure monitoring and may disclose version information useful for targeted exploitation."
+  remediation: "Restrict Zabbix web access to authorized networks. Require VPN access for the monitoring interface. Ensure the installed version is current and patched."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /zabbix/
+      - /zabbix/index.php
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Zabbix"]
+        part: body
+      - type: word
+        words: ["login", "password", "Sign in"]
+        part: body
+        condition: or

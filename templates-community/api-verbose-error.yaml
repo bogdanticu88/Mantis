@@ -1,0 +1,30 @@
+id: api-verbose-error
+info:
+  name: API Verbose Error Response Reveals Framework or Routes
+  severity: low
+  tags: [api, rest, error-handling, information-disclosure, fingerprint, api-graphql-security]
+  description: "A 404 response from an API endpoint that reveals framework names, version strings, internal route structures, or stack traces assists attackers in targeting known vulnerabilities for that stack."
+  remediation: "Return generic error responses in production. Ensure error handlers do not propagate internal exception details or route tables to clients."
+  cwe: "CWE-209"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /api/nonexistent_endpoint_mantis_probe
+      - /api/v1/nonexistent_endpoint_mantis_probe
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [404]
+      - type: regex
+        regex:
+          - "(Express|Django|Laravel|Rails|Spring|Symfony|Flask|FastAPI|ASP\\.NET|Gin|Echo|Fiber|Koa|Hapi|Nest\\.js|Rack|Sinatra)"
+          - "(at\\s+[A-Za-z]+\\.[A-Za-z]+\\s+\\(.*\\.js:\\d+:\\d+\\))"
+          - "(File \".*\\.py\", line \\d+)"
+          - "no route found for|Cannot GET|Route not found|404.*route"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 100"

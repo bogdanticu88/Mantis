@@ -1,0 +1,25 @@
+id: robots-txt-sensitive-paths
+info:
+  name: Robots.txt Sensitive Path Disclosure
+  severity: info
+  tags: [robots-txt, information-disclosure, recon, miscellaneous-security]
+  description: "Robots.txt Disallow entries expose admin, API, backup, or internal paths. Attackers use these to map hidden areas that the site operator intended to keep unlisted."
+  remediation: "Do not list sensitive paths in robots.txt. Protect those areas with proper authentication instead of relying on robots exclusion."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /robots.txt
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Disallow"]
+        part: body
+      - type: regex
+        regex:
+          - "Disallow:\\s*/(?:admin|api|backup|secret|private|internal|manage|dashboard|config|staging|dev|test|phpmyadmin|wp-admin|upload|hidden)"
+        part: body
+        condition: or

@@ -10,10 +10,14 @@
 package dsl
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"math/rand"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -78,6 +82,116 @@ func DefaultFuncs() map[string]Func {
 				return nil, fmt.Errorf("to_upper(s) expects 1 arg")
 			}
 			return strings.ToUpper(toString(args[0])), nil
+		},
+
+		// --- encoding / decoding ---
+
+		"base64_encode": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("base64_encode(s) expects 1 arg")
+			}
+			return base64.StdEncoding.EncodeToString([]byte(toString(args[0]))), nil
+		},
+		"base64_decode": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("base64_decode(s) expects 1 arg")
+			}
+			b, err := base64.StdEncoding.DecodeString(toString(args[0]))
+			if err != nil {
+				// Try URL-safe variant before giving up.
+				b, err = base64.URLEncoding.DecodeString(toString(args[0]))
+				if err != nil {
+					return nil, fmt.Errorf("base64_decode: %w", err)
+				}
+			}
+			return string(b), nil
+		},
+		"url_encode": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("url_encode(s) expects 1 arg")
+			}
+			return url.QueryEscape(toString(args[0])), nil
+		},
+		"url_decode": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("url_decode(s) expects 1 arg")
+			}
+			s, err := url.QueryUnescape(toString(args[0]))
+			if err != nil {
+				return nil, fmt.Errorf("url_decode: %w", err)
+			}
+			return s, nil
+		},
+		"hex_encode": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("hex_encode(s) expects 1 arg")
+			}
+			return hex.EncodeToString([]byte(toString(args[0]))), nil
+		},
+		"hex_decode": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("hex_decode(s) expects 1 arg")
+			}
+			b, err := hex.DecodeString(toString(args[0]))
+			if err != nil {
+				return nil, fmt.Errorf("hex_decode: %w", err)
+			}
+			return string(b), nil
+		},
+
+		// --- string manipulation ---
+
+		"trim": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("trim(s) expects 1 arg")
+			}
+			return strings.TrimSpace(toString(args[0])), nil
+		},
+		"replace": func(args ...any) (any, error) {
+			if len(args) != 3 {
+				return nil, fmt.Errorf("replace(s, old, new) expects 3 args")
+			}
+			return strings.ReplaceAll(toString(args[0]), toString(args[1]), toString(args[2])), nil
+		},
+		// split(s, sep, index) returns the element at index after splitting s by sep.
+		// Returns an empty string when index is out of range.
+		"split": func(args ...any) (any, error) {
+			if len(args) != 3 {
+				return nil, fmt.Errorf("split(s, sep, index) expects 3 args")
+			}
+			parts := strings.Split(toString(args[0]), toString(args[1]))
+			idx, ok := args[2].(int64)
+			if !ok {
+				f, fok := toFloat(args[2])
+				if !fok {
+					return nil, fmt.Errorf("split: index must be an integer")
+				}
+				idx = int64(f)
+			}
+			if idx < 0 || int(idx) >= len(parts) {
+				return "", nil
+			}
+			return parts[idx], nil
+		},
+
+		// --- generation ---
+
+		// rand_str(n) produces an n-character alphanumeric string.
+		// Useful for embedding unique nonce values in probe requests.
+		"rand_str": func(args ...any) (any, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("rand_str(n) expects 1 arg")
+			}
+			n, ok := toFloat(args[0])
+			if !ok || n < 1 {
+				return nil, fmt.Errorf("rand_str: n must be a positive integer")
+			}
+			const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+			buf := make([]byte, int(n))
+			for i := range buf {
+				buf[i] = charset[rand.Intn(len(charset))]
+			}
+			return string(buf), nil
 		},
 	}
 }

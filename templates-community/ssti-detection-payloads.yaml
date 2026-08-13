@@ -1,0 +1,36 @@
+id: ssti-detection-payloads
+info:
+  name: Server-Side Template Injection – Arithmetic Probe
+  severity: critical
+  tags: [ssti, injection, rce]
+  description: "A mathematical expression injected into a query parameter was evaluated server-side and its result was returned in the response, indicating the application passes user input directly into a template engine (Jinja2, Twig, Freemarker, Velocity, etc.). SSTI can lead to full remote code execution."
+  remediation: "Never pass user-supplied strings to a template engine's render function. Accept only controlled, developer-authored templates. If dynamic content is unavoidable, use a sandboxed template engine and validate that expressions cannot reference filesystem or OS objects."
+  cwe: "CWE-94"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  probe:
+    - "{{7*7}}"
+    - "${7*7}"
+    - "#{7*7}"
+    - "<%= 7*7 %>"
+    - "{{7*'7'}}"
+    - "${{7*7}}"
+    - "{{config}}"
+    - "{{''.__class__}}"
+
+requests:
+  - method: GET
+    path: "/?name={{probe}}"
+    matchers-condition: or
+    matchers:
+      - type: word
+        words: ["49"]
+      - type: word
+        words: ["7777777"]   # Jinja2 {{7*'7'}} → string repetition
+      - type: regex
+        regex:
+          - "class 'str'"
+          - "class 'dict'"
+          - "object Object"
+          - "<Config "

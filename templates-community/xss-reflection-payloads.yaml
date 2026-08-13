@@ -1,0 +1,37 @@
+id: xss-reflection-payloads
+info:
+  name: Reflected XSS – Payload List
+  severity: high
+  tags: [xss, reflection, injection]
+  description: "One or more XSS probe payloads were reflected verbatim in the response body, indicating that user-supplied input is echoed into the page without HTML encoding. A real attacker could craft a link that executes arbitrary JavaScript in the victim's browser."
+  remediation: "HTML-encode all user-supplied values before inserting them into HTML contexts. Use a templating engine with auto-escaping enabled (e.g. Jinja2, Razor, React JSX). Set Content-Security-Policy to restrict inline script execution as a defence-in-depth measure."
+  cwe: "CWE-79"
+  owasp: "A03:2021-Injection"
+
+payloads:
+  xss:
+    - "<script>alert(1)</script>"
+    - "<img src=x onerror=alert(1)>"
+    - "\"><script>alert(1)</script>"
+    - "'><script>alert(1)</script>"
+    - "<svg onload=alert(1)>"
+    - "javascript:alert(1)"
+    - "<body onload=alert(1)>"
+    - "<details open ontoggle=alert(1)>"
+
+requests:
+  - method: GET
+    path: "/?q={{xss}}"
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "<script>alert\\(1\\)</script>"
+          - "<img src=x onerror=alert\\(1\\)>"
+          - "\"><script>alert\\(1\\)</script>"
+          - "'><script>alert\\(1\\)</script>"
+          - "<svg onload=alert\\(1\\)>"
+          - "javascript:alert\\(1\\)"
+          - "<body onload=alert\\(1\\)>"
+          - "<details open ontoggle=alert\\(1\\)>"
+        condition: or

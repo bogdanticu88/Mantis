@@ -1,0 +1,23 @@
+id: sonarqube-open-instance
+info:
+  name: SonarQube Instance Open Without Authentication
+  severity: medium
+  tags: [sonarqube, code-quality, devops, detection, open-instance, no-auth]
+  description: "SonarQube code quality platform project API responds without requiring authentication. May expose source code analysis results, detected security vulnerabilities, code coverage data, and internal project structure."
+  remediation: "Set 'sonar.forceAuthentication=true' in sonar.properties or Administration > Configuration. Review and restrict public permissions on all projects. Restrict network access to internal teams."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /api/projects/search
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["components", "paging"]
+        part: body
+        condition: and
+      - type: dsl
+        dsl: "content_length > 30"

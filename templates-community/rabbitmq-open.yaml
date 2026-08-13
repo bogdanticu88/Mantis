@@ -1,0 +1,20 @@
+id: rabbitmq-open
+info:
+  name: RabbitMQ Management API Accessible Without Authentication
+  severity: high
+  tags: [exposure, rabbitmq, auth, messaging]
+  description: "The RabbitMQ management API is accessible without credentials (or with default guest:guest). An attacker can enumerate queues and exchanges, read message payloads, and publish or consume messages."
+  remediation: "Restrict the management plugin to localhost. Remove the guest user or change its password. Apply network-level access controls to port 15672."
+  cwe: "CWE-306"
+  owasp: "A01:2021-Broken Access Control"
+
+requests:
+  - method: GET
+    path: /api/overview
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["rabbitmq_version", "message_stats"]
+        condition: or

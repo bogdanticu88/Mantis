@@ -1,0 +1,33 @@
+id: django-log-exposure
+info:
+  name: Django Application Log Exposure
+  severity: high
+  tags: [django, python, log-exposure, framework, misconfiguration]
+  description: "Detects publicly accessible Django log files. These may contain ERROR-level tracebacks, database queries, request details, and internal module paths."
+  remediation: "Configure Django logging to write files outside the web root. Verify STATIC_ROOT and MEDIA_ROOT do not overlap with log output directories."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /debug.log
+      - /error.log
+      - /django.log
+      - /app.log
+      - /logs/django.log
+      - /logs/error.log
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "django\\.request|django\\.security|django\\.db"
+          - "(ERROR|WARNING|CRITICAL)\\s+\\d{4}-\\d{2}-\\d{2}"
+          - "Traceback \\(most recent call last\\)"
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 64"

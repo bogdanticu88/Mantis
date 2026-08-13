@@ -1,0 +1,27 @@
+id: cloud-init-logs
+info:
+  name: Cloud-Init Log File Publicly Accessible
+  severity: medium
+  tags: [cloud, cloud-init, logs, disclosure, misconfiguration, cloud-infrastructure]
+  description: "Cloud-init log files are accessible via HTTP. These logs can expose cloud provider metadata, user-data provisioning scripts, SSH key material, and secrets passed at instance startup."
+  remediation: "Remove any web server configuration that maps system log paths. Apply a deny-all rule in the web server root config for paths outside the application document root."
+  cwe: "CWE-532"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /var/log/cloud-init.log
+      - /var/log/cloud-init-output.log
+      - /cloud-init.log
+      - /cloud-init-output.log
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["cloud-init", "Cloud-init"]
+        part: body
+        condition: or
+      - type: dsl
+        dsl: "content_length > 100"

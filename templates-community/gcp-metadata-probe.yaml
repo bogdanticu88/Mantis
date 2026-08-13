@@ -1,0 +1,25 @@
+id: gcp-metadata-probe
+info:
+  name: GCP Instance Metadata Service Accessible
+  severity: high
+  tags: [cloud, gcp, metadata, imds, cloud-infrastructure]
+  description: "The GCP instance metadata endpoint is directly accessible. Attackers can retrieve service account tokens, project IDs, and instance configuration data."
+  remediation: "Block access to the metadata endpoint at the network level. Use GCP workload identity to avoid storing static credentials on instances."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - http://metadata.google.internal/computeMetadata/v1/
+      - http://169.254.169.254/computeMetadata/v1/
+    headers:
+      Metadata-Flavor: "Google"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["instance/", "project/"]
+        part: body
+        condition: or

@@ -1,0 +1,29 @@
+id: gitlab-ce-detection
+info:
+  name: GitLab Community Edition Detection
+  severity: info
+  tags: [gitlab, detection, developer-tools, vcs, git]
+  description: "Detects an exposed GitLab CE instance. GitLab hosts source code, CI/CD pipelines, and secrets. Public visibility or weak access controls can expose repositories and internal tooling."
+  remediation: "Restrict sign-up, require authentication for all resources, and place GitLab behind a VPN or IP allowlist."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /
+      - /users/sign_in
+      - /explore
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["GitLab", "gitlab-ce", "gl-emoji"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ["content=\"GitLab\"", "<meta[^>]+GitLab", "gitlab\\.com/gitlab-org"]
+        part: body
+        condition: or

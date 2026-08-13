@@ -1,0 +1,30 @@
+id: cors-wildcard-check
+info:
+  name: CORS Wildcard Origin on API Endpoint
+  severity: medium
+  tags: [cors, api, rest, misconfiguration, api-graphql-security]
+  description: "An API endpoint returning Access-Control-Allow-Origin: * allows any web origin to make credentialed cross-origin requests and read the response, potentially exposing sensitive data to malicious sites."
+  remediation: "Restrict CORS origins to an explicit allowlist of trusted domains. Never combine wildcard origin with Access-Control-Allow-Credentials: true."
+  cwe: "CWE-942"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /api/
+      - /api/v1/
+      - /api/v2/
+      - /api/health
+      - /api/status
+    headers:
+      Origin: "https://attacker-probe.example.com"
+      Accept: "application/json"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        regex:
+          - "(?i)access-control-allow-origin:\\s*\\*"
+        part: header

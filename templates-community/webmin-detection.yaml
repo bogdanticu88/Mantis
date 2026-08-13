@@ -1,0 +1,25 @@
+id: webmin-detection
+info:
+  name: Webmin Server Admin Panel Exposed
+  severity: medium
+  tags: [webmin, server-admin, admin-panel, network-admin-panels, linux]
+  description: "Webmin server administration panel is publicly reachable (typically port 10000). Provides root-level management including user accounts, file system, network configuration, and package management."
+  remediation: "Restrict Webmin port 10000 to administrator IPs using firewall rules. Enable Webmin IP access control under Webmin Configuration > IP Access Control. Expose only over VPN for remote access."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Webmin"]
+        part: body
+      - type: word
+        words: ["Webmin Login", "Login to Webmin", "webmin_user", "webmin-init"]
+        part: body
+        condition: or

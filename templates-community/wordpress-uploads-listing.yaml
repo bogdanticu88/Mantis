@@ -1,0 +1,25 @@
+id: wordpress-uploads-listing
+info:
+  name: WordPress Uploads Directory Listing Enabled
+  severity: medium
+  tags: [wordpress, cms, directory-listing, misconfiguration, exposure]
+  description: "The WordPress uploads directory has directory listing enabled, exposing all uploaded files to unauthenticated users including potentially sensitive documents and media."
+  remediation: "Add 'Options -Indexes' to .htaccess in wp-content/uploads/ or disable directory listing globally in your web server configuration."
+  cwe: "CWE-548"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    path: /wp-content/uploads/
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Index of", "Parent Directory"]
+        part: body
+        condition: or
+      - type: regex
+        regex: ['\.(jpg|jpeg|png|gif|pdf|docx?)"']
+        part: body

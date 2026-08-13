@@ -1,0 +1,42 @@
+id: wordpress-theme-detection
+info:
+  name: WordPress Active Theme Fingerprinting via style.css
+  severity: info
+  tags: [wordpress, cms, theme, fingerprint, detection]
+  description: "The active WordPress theme name and version are exposed via the style.css header comment block, enabling attackers to target known theme-specific vulnerabilities."
+  remediation: "Remove version information from theme style.css files. Use a security plugin to restrict direct access to theme files where possible."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /wp-content/themes/twentytwentyfour/style.css
+      - /wp-content/themes/twentytwentythree/style.css
+      - /wp-content/themes/twentytwentytwo/style.css
+      - /wp-content/themes/twentytwentyone/style.css
+      - /wp-content/themes/astra/style.css
+      - /wp-content/themes/oceanwp/style.css
+      - /wp-content/themes/divi/style.css
+      - /wp-content/themes/avada/style.css
+      - /wp-content/themes/hello-elementor/style.css
+      - /wp-content/themes/generatepress/style.css
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["Theme Name:", "Theme URI:"]
+        part: body
+        condition: or
+
+    extractors:
+      - type: regex
+        name: theme_name
+        regex: 'Theme Name:\s*(.+)'
+        group: 1
+      - type: regex
+        name: theme_version
+        regex: 'Version:\s*([0-9]+\.[0-9]+\.?[0-9]*)'
+        group: 1

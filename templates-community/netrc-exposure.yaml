@@ -1,0 +1,23 @@
+id: netrc-exposure
+info:
+  name: "Netrc Credentials File Exposure"
+  severity: critical
+  tags: [credentials, netrc, config, plaintext, exposure, config-file-exposures]
+  description: "Detects publicly accessible .netrc files that store plaintext usernames and passwords for FTP, HTTP, and other remote services. Credentials are immediately usable by an attacker."
+  remediation: "Remove .netrc from the web root immediately. Rotate all credentials stored in the exposed file and restrict filesystem permissions on .netrc to the owning user only."
+  cwe: "CWE-312"
+  owasp: "A02:2021-Cryptographic Failures"
+
+requests:
+  - method: GET
+    path: /.netrc
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words:
+          - "machine"
+          - "password"
+        part: body
+        condition: and

@@ -1,0 +1,25 @@
+id: apache-server-status
+info:
+  name: Apache Server Status and Info Pages Exposed
+  severity: medium
+  tags: [apache, detection, web-server-framework-detection, misconfig, information-disclosure]
+  description: "Apache mod_status and mod_info expose real-time request metrics, worker states, and server configuration. Publicly reachable status pages aid attacker reconnaissance and may reveal internal hostnames or network topology."
+  remediation: "Restrict /server-status and /server-info to localhost or a management CIDR via Require ip directives. Disable mod_status and mod_info in httpd.conf when not operationally needed."
+  cwe: "CWE-200"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /server-status
+      - /server-info
+      - /server-status?auto
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['Apache Server Status', 'requests currently being processed', 'Server Information', 'Module Name']
+        part: body
+        condition: or

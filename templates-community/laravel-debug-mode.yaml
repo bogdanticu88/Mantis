@@ -1,0 +1,23 @@
+id: laravel-debug-mode
+info:
+  name: Laravel Application Debug Mode Enabled
+  severity: high
+  tags: [laravel, php, debug, detection, web-server-framework-detection, information-disclosure, sensitive-exposure]
+  description: "The Laravel application is running with APP_DEBUG=true. Ignition error pages expose full stack traces, SQL queries, environment variables, and potentially database credentials or API keys on any unhandled exception."
+  remediation: "Set APP_DEBUG=false in the production .env file. Configure a custom exception handler and route errors to a structured logging sink rather than the HTTP response."
+  cwe: "CWE-94"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /_ignition/health-check
+      - /ignition/health-check
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['can_execute_commands']
+        part: body

@@ -1,0 +1,26 @@
+id: phpmyadmin-detection
+info:
+  name: phpMyAdmin Detected
+  severity: medium
+  tags: [tech, fingerprint, phpmyadmin, database]
+  description: "A phpMyAdmin interface is publicly accessible. Direct database admin access from the internet is a high-risk exposure regardless of password strength."
+  remediation: "Restrict phpMyAdmin access to localhost or a VPN. Place it behind an additional authentication layer and never expose it directly to the internet."
+  cwe: "CWE-284"
+  owasp: "A05:2021-Security Misconfiguration"
+
+requests:
+  - method: GET
+    paths:
+      - /phpmyadmin/
+      - /phpMyAdmin/
+      - /pma/
+      - /dbadmin/
+      - /mysql/
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["phpMyAdmin", "phpmyadmin"]
+        condition: or
