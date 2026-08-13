@@ -272,11 +272,11 @@ func checkPrivateIPDisclosure(target, environment string, resp *httpclient.Respo
 }
 
 var stackTracePatterns = []*regexp.Regexp{
-	regexp.MustCompile(`\tat [a-zA-Z_$][a-zA-Z0-9_$.]*\(`),                                     // Java (com.example.Class.method()
-	regexp.MustCompile(`Traceback \(most recent call last\):`),                                   // Python
+	regexp.MustCompile(`\tat [a-zA-Z_$][a-zA-Z0-9_$.]*\(`),                                      // Java (com.example.Class.method()
+	regexp.MustCompile(`Traceback \(most recent call last\):`),                                  // Python
 	regexp.MustCompile(`(?i)Fatal error:.*in .+\.php on line \d+`),                              // PHP
-	regexp.MustCompile(`goroutine \d+ \[running\]:`),                                             // Go
-	regexp.MustCompile(`at Object\.<anonymous> \(`),                                              // Node.js
+	regexp.MustCompile(`goroutine \d+ \[running\]:`),                                            // Go
+	regexp.MustCompile(`at Object\.<anonymous> \(`),                                             // Node.js
 	regexp.MustCompile(`System\.(NullReference|ArgumentNull|InvalidOperation|Web|IO)Exception`), // .NET
 }
 

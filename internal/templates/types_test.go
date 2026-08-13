@@ -22,12 +22,12 @@ func TestValidate_Valid(t *testing.T) {
 
 func TestValidate_Rejections(t *testing.T) {
 	cases := map[string]func(*Template){
-		"missing id":             func(tpl *Template) { tpl.ID = "" },
-		"missing name":           func(tpl *Template) { tpl.Info.Name = "" },
-		"invalid severity":       func(tpl *Template) { tpl.Info.Severity = "extremely-bad" },
-		"no requests":            func(tpl *Template) { tpl.Requests = nil },
-		"request missing method": func(tpl *Template) { tpl.Requests[0].Method = "" },
-		"request missing path":      func(tpl *Template) { tpl.Requests[0].Path = "" },
+		"missing id":                 func(tpl *Template) { tpl.ID = "" },
+		"missing name":               func(tpl *Template) { tpl.Info.Name = "" },
+		"invalid severity":           func(tpl *Template) { tpl.Info.Severity = "extremely-bad" },
+		"no requests":                func(tpl *Template) { tpl.Requests = nil },
+		"request missing method":     func(tpl *Template) { tpl.Requests[0].Method = "" },
+		"request missing path":       func(tpl *Template) { tpl.Requests[0].Path = "" },
 		"request path and paths set": func(tpl *Template) { tpl.Requests[0].Paths = []string{"/a"} },
 	}
 	for name, mutate := range cases {
