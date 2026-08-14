@@ -1,0 +1,70 @@
+id: spring-actuator-adaptive
+info:
+  name: Spring Boot Actuator – Adaptive Sensitive Endpoint Probe
+  severity: high
+  tags: [spring-boot, actuator, info-disclosure, flow]
+  description: >
+    Confirms the Spring Boot Actuator management interface is reachable
+    via the /actuator index, then adaptively probes for high-value endpoints:
+    /env first (environment variables often containing database URLs, cloud
+    credentials, and API keys), falling back to /heapdump if env is locked
+    down (raw JVM heap dumps can contain in-memory secrets and session tokens).
+    Running exploit requests unconditionally would hit every target regardless
+    of whether Actuator is present. The flow engine gates each step on the
+    previous result, so sensitive requests only fire against confirmed Spring
+    Boot Actuator deployments.
+  remediation: >
+    Restrict actuator endpoints to a dedicated management port and require
+    authentication via Spring Security. Disable endpoints not actively
+    monitored: management.endpoint.env.enabled=false,
+    management.endpoint.heapdump.enabled=false.
+  cwe: CWE-200
+  owasp: "A05:2021-Security Misconfiguration"
+
+flow: |
+  # Confirm the Actuator index is reachable before probing anything sensitive.
+  # This prevents exploit requests from firing against targets that aren't
+  # Spring Boot apps at all.
+  http(1)
+  set actuator_open = http1_status == 200
+  if actuator_open
+    # /env is the higher-value target: it exposes configuration properties
+    # and often leaks database URLs, API keys, and cloud credentials.
+    http(2)
+    if http2_matched
+      # env is wide open — finding confirmed, no need to check heapdump.
+      stop
+    else
+      # env is locked down. Heapdump is still a serious finding on its own:
+      # a raw JVM heap can contain in-memory secrets and session tokens.
+      http(3)
+    end
+  end
+
+requests:
+  - method: GET
+    path: /actuator
+    # Pure reachability probe — no matchers. http1_status drives the flow
+    # condition above. This request produces no finding by itself.
+
+  - method: GET
+    path: /actuator/env
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["propertySources", "activeProfiles", "systemEnvironment"]
+        part: body
+        condition: or
+
+  - method: GET
+    path: /actuator/heapdump
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ["application/octet-stream", "application/x-hprof"]
+        part: header
+        condition: or
