@@ -7,39 +7,57 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bogdanticu88/Mantis/internal/dsl"
 	"github.com/bogdanticu88/Mantis/internal/findings"
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
+// ResponseHook is called after every HTTP response in a template chain.
+// The returned findings are accumulated as passive results (e.g. global
+// matcher hits) and are separate from the template's own match findings.
+type ResponseHook func(resp *httpclient.Response, target, environment, path string) []findings.Finding
+
 // RunResult is the outcome of executing one template against one target.
 type RunResult struct {
-	Template *Template
-	Target   string
-	Matched  bool
-	Findings []findings.Finding
-	Vars     map[string]string
-	Error    error
+	Template        *Template
+	Target          string
+	Matched         bool
+	Findings        []findings.Finding
+	PassiveFindings []findings.Finding // from ResponseHook, not from template matchers
+	Vars            map[string]string
+	Error           error
 }
 
 // Run executes tpl against target. baseVars seeds the variable set (e.g.
 // secrets resolved from an environment/auth config) and is layered over the
 // template's own `variables` block. environment is stamped onto any finding.
 //
+// An optional ResponseHook is called after every HTTP response in the chain.
+// The hook's returned findings are collected in RunResult.PassiveFindings and
+// are separate from template-match findings. Pass nil (or omit the argument)
+// to disable.
+//
 // Payload semantics: when the template defines a `payloads` block, Run
-// iterates over each payload combination (sniper or pitchfork, controlled by
-// the `attack` field) and executes the full request chain once per
-// combination. All matching combinations contribute findings to the result.
+// iterates over each payload combination (sniper, pitchfork, or clusterbomb,
+// controlled by the `attack` field) and executes the full request chain once
+// per combination. All matching combinations contribute findings to the result.
 // A connection error on one combination does not abort the rest.
 //
 // Chain semantics: requests execute in order. A request with matchers that
 // fails to match stops the chain. A request with no matchers always passes and
-// exists purely to extract variables for later steps.
+// exists purely to extract variables for later steps. A request whose `when`
+// condition evaluates to false is skipped without failing the chain.
 //
 // Multi-path semantics: when a request spec uses `paths` instead of `path`,
 // each path is tried independently. Every path that matches produces its own
 // finding. For intermediate chain steps, execution stops at the first matching
 // path so the next step has a single, deterministic context.
-func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, tpl *Template, target, environment string, baseVars map[string]string) RunResult {
+func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, tpl *Template, target, environment string, baseVars map[string]string, hooks ...ResponseHook) RunResult {
+	var hook ResponseHook
+	if len(hooks) > 0 {
+		hook = hooks[0]
+	}
+
 	vars := make(map[string]string, len(tpl.Variables)+len(baseVars))
 	for k, v := range tpl.Variables {
 		vars[k] = v
@@ -50,10 +68,11 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 
 	combos := generatePayloadCombinations(tpl)
 	if len(combos) == 0 {
-		return executeChain(ctx, client, redactor, tpl, target, environment, vars)
+		return executeChain(ctx, client, redactor, tpl, target, environment, vars, hook)
 	}
 
 	var allFindings []findings.Finding
+	var allPassive []findings.Finding
 	for _, combo := range combos {
 		iterVars := make(map[string]string, len(vars)+len(combo))
 		for k, v := range vars {
@@ -62,31 +81,45 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 		for k, v := range combo {
 			iterVars[k] = v
 		}
-		r := executeChain(ctx, client, redactor, tpl, target, environment, iterVars)
+		r := executeChain(ctx, client, redactor, tpl, target, environment, iterVars, hook)
 		if r.Error != nil {
 			// A transport error on one payload does not abort the rest of the
 			// set. The caller can correlate by inspecting findings vs payloads.
 			continue
 		}
 		allFindings = append(allFindings, r.Findings...)
+		allPassive = append(allPassive, r.PassiveFindings...)
 	}
 
 	return RunResult{
-		Template: tpl,
-		Target:   target,
-		Matched:  len(allFindings) > 0,
-		Findings: allFindings,
-		Vars:     vars,
+		Template:        tpl,
+		Target:          target,
+		Matched:         len(allFindings) > 0,
+		Findings:        allFindings,
+		PassiveFindings: allPassive,
+		Vars:            vars,
 	}
 }
 
 // executeChain runs tpl's request chain exactly once with the given vars.
-func executeChain(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, tpl *Template, target, environment string, vars map[string]string) RunResult {
+func executeChain(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, tpl *Template, target, environment string, vars map[string]string, hook ResponseHook) RunResult {
 	var allExchanges []findings.HTTPExchange
+	var passiveFindings []findings.Finding
 	chainMatched := true
 	var chainFindings []findings.Finding
 
 	for i, spec := range tpl.Requests {
+		// when: skips this request if the DSL condition evaluates false.
+		// Errors in the expression are non-fatal: we run the request anyway
+		// rather than silently breaking a chain the author intended to run.
+		if spec.When != "" {
+			env := whenEnv(vars)
+			run, err := dsl.EvalBool(spec.When, env)
+			if err == nil && !run {
+				continue
+			}
+		}
+
 		isLast := i == len(tpl.Requests)-1
 		paths := spec.allPaths()
 		specMatched := false
@@ -104,6 +137,10 @@ func executeChain(ctx context.Context, client *httpclient.Client, redactor *http
 				return RunResult{Template: tpl, Target: target, Vars: vars, Error: fmt.Errorf("template %s: %w", tpl.ID, err)}
 			}
 			allExchanges = append(allExchanges, redactor.Exchange(resp))
+
+			if hook != nil {
+				passiveFindings = append(passiveFindings, hook(resp, target, environment, path)...)
+			}
 
 			if err := runExtractors(spec, resp, vars); err != nil {
 				return RunResult{Template: tpl, Target: target, Vars: vars, Error: fmt.Errorf("template %s: %w", tpl.ID, err)}
@@ -133,7 +170,13 @@ func executeChain(ctx context.Context, client *httpclient.Client, redactor *http
 		}
 	}
 
-	result := RunResult{Template: tpl, Target: target, Matched: chainMatched && len(chainFindings) > 0, Vars: vars}
+	result := RunResult{
+		Template:        tpl,
+		Target:          target,
+		Matched:         chainMatched && len(chainFindings) > 0,
+		Vars:            vars,
+		PassiveFindings: passiveFindings,
+	}
 	if result.Matched {
 		result.Findings = chainFindings
 	}
@@ -147,10 +190,14 @@ func generatePayloadCombinations(tpl *Template) []map[string]string {
 	if len(tpl.Payloads) == 0 {
 		return nil
 	}
-	if strings.ToLower(tpl.Attack) == "pitchfork" {
+	switch strings.ToLower(tpl.Attack) {
+	case "pitchfork":
 		return pitchforkCombos(tpl.Payloads)
+	case "clusterbomb":
+		return clusterbombCombos(tpl.Payloads)
+	default:
+		return sniperCombos(tpl.Payloads)
 	}
-	return sniperCombos(tpl.Payloads)
 }
 
 // sniperCombos iterates the single payload set one value at a time.
@@ -187,6 +234,41 @@ func pitchforkCombos(payloads map[string][]string) []map[string]string {
 		combos[i] = combo
 	}
 	return combos
+}
+
+// clusterbombCombos returns the Cartesian product of all payload sets. With
+// two sets [a, b] and [x, y, z] it produces: (a,x) (a,y) (a,z) (b,x) (b,y)
+// (b,z). Names are sorted so iteration order is deterministic.
+func clusterbombCombos(payloads map[string][]string) []map[string]string {
+	names := sortedKeys(payloads)
+	combos := []map[string]string{{}}
+	for _, name := range names {
+		values := payloads[name]
+		next := make([]map[string]string, 0, len(combos)*len(values))
+		for _, combo := range combos {
+			for _, v := range values {
+				c := make(map[string]string, len(combo)+1)
+				for k, vv := range combo {
+					c[k] = vv
+				}
+				c[name] = v
+				next = append(next, c)
+			}
+		}
+		combos = next
+	}
+	return combos
+}
+
+// whenEnv builds a DSL evaluation environment from the current chain
+// variables. String variables are exposed as-is so a when expression like
+// `token != ""` or `contains(user_role, "admin")` works naturally.
+func whenEnv(vars map[string]string) dsl.Env {
+	v := make(map[string]any, len(vars))
+	for k, val := range vars {
+		v[k] = val
+	}
+	return dsl.Env{Vars: v, Funcs: dsl.DefaultFuncs()}
 }
 
 func sortedKeys(m map[string][]string) []string {

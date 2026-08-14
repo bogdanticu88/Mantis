@@ -114,13 +114,36 @@ func TestValidate_PayloadFields(t *testing.T) {
 		}
 	})
 
-	// Unknown attack mode is an error.
+	// Unknown attack mode is an error (clusterbomb with hyphen is still wrong).
 	t.Run("unknown attack mode", func(t *testing.T) {
 		tpl := validTemplate()
 		tpl.Attack = "cluster-bomb"
 		tpl.Payloads = map[string][]string{"x": {"a"}}
 		if err := tpl.Validate(); err == nil {
 			t.Error("expected Validate() to fail on unknown attack mode")
+		}
+	})
+
+	// Clusterbomb with multiple sets is valid.
+	t.Run("clusterbomb multiple sets", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Attack = "clusterbomb"
+		tpl.Payloads = map[string][]string{
+			"user": {"admin", "guest"},
+			"pass": {"password", "letmein"},
+		}
+		if err := tpl.Validate(); err != nil {
+			t.Errorf("clusterbomb with multiple payload sets should be valid: %v", err)
+		}
+	})
+
+	// Clusterbomb with a single set is also valid (degenerate but not an error).
+	t.Run("clusterbomb single set", func(t *testing.T) {
+		tpl := validTemplate()
+		tpl.Attack = "clusterbomb"
+		tpl.Payloads = map[string][]string{"injection": {"'", "' OR 1=1--"}}
+		if err := tpl.Validate(); err != nil {
+			t.Errorf("clusterbomb with one payload set should be valid: %v", err)
 		}
 	})
 

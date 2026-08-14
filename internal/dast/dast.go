@@ -6,6 +6,7 @@ import (
 	"github.com/bogdanticu88/Mantis/internal/attacks"
 	"github.com/bogdanticu88/Mantis/internal/environments"
 	"github.com/bogdanticu88/Mantis/internal/findings"
+	"github.com/bogdanticu88/Mantis/internal/globalmatchers"
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
 	"github.com/bogdanticu88/Mantis/internal/templates"
 )
@@ -64,12 +65,17 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 		return result, nil
 	}
 
+	gmHook := func(resp *httpclient.Response, target, environment, path string) []findings.Finding {
+		return globalmatchers.EvalAll(globalmatchers.Builtin, resp, target, environment, path)
+	}
+
 	for _, tpl := range opts.Templates {
-		r := templates.Run(ctx, client, redactor, tpl, opts.Target, opts.Environment, opts.BaseVars)
+		r := templates.Run(ctx, client, redactor, tpl, opts.Target, opts.Environment, opts.BaseVars, gmHook)
 		if r.Error != nil {
 			continue
 		}
 		result.ActiveFindings = append(result.ActiveFindings, r.Findings...)
+		result.PassiveFindings = append(result.PassiveFindings, r.PassiveFindings...)
 	}
 
 	fuzzOpts := attacks.Options{

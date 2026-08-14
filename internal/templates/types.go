@@ -76,6 +76,16 @@ type RequestSpec struct {
 	Headers map[string]string `yaml:"headers,omitempty"`
 	Body    string            `yaml:"body,omitempty"`
 
+	// When is an optional DSL expression (same syntax as dsl matchers) that
+	// gates whether this request runs at all. It is evaluated against the
+	// variables extracted by earlier steps in the chain. A false result skips
+	// the request without failing the chain, allowing templates to branch on
+	// what earlier steps discovered.
+	//
+	//   when: 'csrf_token != ""'
+	//   when: 'contains(content_type, "application/json")'
+	When string `yaml:"when,omitempty"`
+
 	MatchersCondition string      `yaml:"matchers-condition,omitempty"` // and (default) / or, across Matchers
 	Matchers          []Matcher   `yaml:"matchers,omitempty"`
 	Extractors        []Extractor `yaml:"extractors,omitempty"`
@@ -159,12 +169,14 @@ func (t *Template) Validate() error {
 		switch mode {
 		case "", "sniper":
 			if len(t.Payloads) > 1 {
-				return fmt.Errorf("template %s: sniper attack mode supports exactly one payload set; use attack: pitchfork for multiple sets", t.ID)
+				return fmt.Errorf("template %s: sniper attack mode supports exactly one payload set; use attack: pitchfork or clusterbomb for multiple sets", t.ID)
 			}
 		case "pitchfork":
 			// Multiple sets are fine; they are zipped in lockstep.
+		case "clusterbomb":
+			// Multiple sets produce a Cartesian product; any count is valid.
 		default:
-			return fmt.Errorf("template %s: unknown attack mode %q (want sniper or pitchfork)", t.ID, t.Attack)
+			return fmt.Errorf("template %s: unknown attack mode %q (want sniper, pitchfork, or clusterbomb)", t.ID, t.Attack)
 		}
 		for name, vals := range t.Payloads {
 			if len(vals) == 0 {

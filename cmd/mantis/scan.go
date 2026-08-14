@@ -9,6 +9,7 @@ import (
 
 	"github.com/bogdanticu88/Mantis/internal/findings"
 	"github.com/bogdanticu88/Mantis/internal/gate"
+	"github.com/bogdanticu88/Mantis/internal/globalmatchers"
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
 	"github.com/bogdanticu88/Mantis/internal/reporters"
 	"github.com/bogdanticu88/Mantis/internal/templates"
@@ -69,13 +70,18 @@ func cmdScan(args []string) error {
 	baseVars := mergeVars(map[string]string{"BaseURL": baseURL}, authVars(headers))
 	oobSession := setupOOB(ctx, *oobServer, baseVars)
 
+	gmHook := func(resp *httpclient.Response, target, env, path string) []findings.Finding {
+		return globalmatchers.EvalAll(globalmatchers.Builtin, resp, target, env, path)
+	}
+
 	var allFindings []findings.Finding
 	for _, tpl := range tpls {
-		r := templates.Run(ctx, client, redactor, tpl, baseURL, *environment, baseVars)
+		r := templates.Run(ctx, client, redactor, tpl, baseURL, *environment, baseVars, gmHook)
 		if r.Error != nil {
 			fmt.Fprintf(os.Stderr, "mantis: template %s: %v\n", tpl.ID, r.Error)
 			continue
 		}
+		allFindings = append(allFindings, r.PassiveFindings...)
 		allFindings = append(allFindings, r.Findings...)
 	}
 

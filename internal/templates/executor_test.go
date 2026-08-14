@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bogdanticu88/Mantis/internal/findings"
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
 
@@ -500,5 +501,210 @@ func TestGeneratePayloadCombinations_NoPayloads(t *testing.T) {
 	}
 	if combos := generatePayloadCombinations(tpl); combos != nil {
 		t.Errorf("expected nil for template with no payloads, got %v", combos)
+	}
+}
+
+func TestGeneratePayloadCombinations_Clusterbomb(t *testing.T) {
+	tpl := &Template{
+		Attack: "clusterbomb",
+		Payloads: map[string][]string{
+			"user": {"alice", "bob"},
+			"pass": {"x", "y", "z"},
+		},
+	}
+	combos := generatePayloadCombinations(tpl)
+	// Cartesian product: 2 users × 3 passwords = 6 combos.
+	if len(combos) != 6 {
+		t.Fatalf("got %d combos, want 6 (2 × 3 Cartesian product)", len(combos))
+	}
+	// Every combo must have both keys set.
+	for i, c := range combos {
+		if c["user"] == "" || c["pass"] == "" {
+			t.Errorf("combo[%d] missing a key: %v", i, c)
+		}
+	}
+	// Every (user, pass) pair must appear exactly once.
+	seen := make(map[string]int)
+	for _, c := range combos {
+		key := c["user"] + ":" + c["pass"]
+		seen[key]++
+	}
+	for _, u := range []string{"alice", "bob"} {
+		for _, p := range []string{"x", "y", "z"} {
+			if seen[u+":"+p] != 1 {
+				t.Errorf("pair (%s,%s) appears %d times, want 1", u, p, seen[u+":"+p])
+			}
+		}
+	}
+}
+
+func TestRun_ClusterbombPayloads(t *testing.T) {
+	type pair struct{ user, pass string }
+	var received []pair
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received = append(received, pair{
+			user: r.URL.Query().Get("user"),
+			pass: r.URL.Query().Get("pass"),
+		})
+		w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	tpl := &Template{
+		ID:     "clusterbomb-test",
+		Info:   Info{Name: "Clusterbomb", Severity: "low"},
+		Attack: "clusterbomb",
+		Payloads: map[string][]string{
+			"user": {"admin", "guest"},
+			"pass": {"p1", "p2"},
+		},
+		Requests: []RequestSpec{{
+			Method:   "GET",
+			Path:     "/?user={{user}}&pass={{pass}}",
+			Matchers: []Matcher{{Type: "word", Words: []string{"ok"}}},
+		}},
+	}
+
+	result := Run(context.Background(), testClient(t), httpclient.NewRedactor(), tpl, srv.URL, "test", nil)
+	if result.Error != nil {
+		t.Fatalf("unexpected error: %v", result.Error)
+	}
+	// 2 users × 2 passwords = 4 combos; all return "ok" so 4 findings.
+	if len(result.Findings) != 4 {
+		t.Fatalf("got %d findings, want 4 (2×2 Cartesian product)", len(result.Findings))
+	}
+	if len(received) != 4 {
+		t.Errorf("server received %d requests, want 4", len(received))
+	}
+}
+
+// --- when (conditional steps) tests ---
+
+func TestRun_WhenSkipsStep(t *testing.T) {
+	var step2Called bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			// Return empty token — when condition on step2 should block it.
+			w.Write([]byte(`{"token":""}`))
+		case "/step2":
+			step2Called = true
+			w.Write([]byte("reached"))
+		}
+	}))
+	defer srv.Close()
+
+	tpl := &Template{
+		ID:   "when-skip",
+		Info: Info{Name: "When Skip", Severity: "info"},
+		Requests: []RequestSpec{
+			{
+				Method:     "GET",
+				Path:       "/login",
+				Extractors: []Extractor{{Type: "json", Name: "token", Path: "$.token"}},
+			},
+			{
+				// token was extracted as empty string; when should skip this step.
+				When:     `token != ""`,
+				Method:   "GET",
+				Path:     "/step2",
+				Matchers: []Matcher{{Type: "word", Words: []string{"reached"}}},
+			},
+		},
+	}
+
+	result := Run(context.Background(), testClient(t), httpclient.NewRedactor(), tpl, srv.URL, "test", nil)
+	if result.Error != nil {
+		t.Fatalf("unexpected error: %v", result.Error)
+	}
+	if step2Called {
+		t.Error("step2 should have been skipped by the when condition, but it ran")
+	}
+	if result.Matched {
+		t.Error("template should not match when the final step was skipped")
+	}
+}
+
+func TestRun_WhenRunsStep(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			w.Write([]byte(`{"token":"abc123"}`))
+		case "/admin":
+			w.Write([]byte("admin panel"))
+		}
+	}))
+	defer srv.Close()
+
+	tpl := &Template{
+		ID:   "when-run",
+		Info: Info{Name: "When Run", Severity: "medium"},
+		Requests: []RequestSpec{
+			{
+				Method:     "GET",
+				Path:       "/login",
+				Extractors: []Extractor{{Type: "json", Name: "token", Path: "$.token"}},
+			},
+			{
+				When:     `token != ""`,
+				Method:   "GET",
+				Path:     "/admin",
+				Matchers: []Matcher{{Type: "word", Words: []string{"admin panel"}}},
+			},
+		},
+	}
+
+	result := Run(context.Background(), testClient(t), httpclient.NewRedactor(), tpl, srv.URL, "test", nil)
+	if result.Error != nil {
+		t.Fatalf("unexpected error: %v", result.Error)
+	}
+	if !result.Matched {
+		t.Error("expected template to match: token was set so the when condition should pass and step2 should run")
+	}
+}
+
+// --- global matcher hook tests ---
+
+func TestRun_PassiveFindingsFromHook(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"key":"AKIAIOSFODNN7EXAMPLE"}`))
+	}))
+	defer srv.Close()
+
+	tpl := &Template{
+		ID:   "hook-test",
+		Info: Info{Name: "Hook Test", Severity: "info"},
+		Requests: []RequestSpec{{
+			Method: "GET",
+			Path:   "/config",
+			// no matchers — exists purely to trigger the hook
+		}},
+	}
+
+	called := false
+	hook := ResponseHook(func(resp *httpclient.Response, target, environment, path string) []findings.Finding {
+		called = true
+		if strings.Contains(string(resp.Body), "AKIA") {
+			return []findings.Finding{{
+				ID: "hook-finding", Name: "AWS Key", Severity: "high",
+				Target: target, Endpoint: path,
+			}}
+		}
+		return nil
+	})
+
+	result := Run(context.Background(), testClient(t), httpclient.NewRedactor(), tpl, srv.URL, "test", nil, hook)
+	if result.Error != nil {
+		t.Fatalf("unexpected error: %v", result.Error)
+	}
+	if !called {
+		t.Error("ResponseHook was not called")
+	}
+	if len(result.PassiveFindings) != 1 {
+		t.Fatalf("got %d passive findings, want 1", len(result.PassiveFindings))
+	}
+	if result.PassiveFindings[0].ID != "hook-finding" {
+		t.Errorf("unexpected passive finding ID: %q", result.PassiveFindings[0].ID)
 	}
 }
