@@ -119,8 +119,16 @@ type Template struct {
 
 	// Attack controls how payload sets are combined when there is more than
 	// one. "sniper" (default) supports exactly one payload set. "pitchfork"
-	// zips multiple sets in lockstep, stopping at the shortest.
+	// zips multiple sets in lockstep; "clusterbomb" produces the full
+	// Cartesian product.
 	Attack string `yaml:"attack,omitempty"`
+
+	// Flow is an optional scripting program that controls which requests run
+	// and in what order. When present it replaces the default sequential chain
+	// — all requests in the `requests` list are available to the flow script
+	// via http(N) calls, but none run automatically. See flow.go for the full
+	// syntax: http(N), if/else/end, set, stop.
+	Flow string `yaml:"flow,omitempty"`
 
 	Requests []RequestSpec `yaml:"requests"`
 
@@ -140,6 +148,11 @@ func (t *Template) Validate() error {
 	}
 	if len(t.Requests) == 0 {
 		return fmt.Errorf("template %s: at least one request is required", t.ID)
+	}
+	if t.Flow != "" {
+		if _, err := parseFlow(t.Flow); err != nil {
+			return fmt.Errorf("template %s: flow: %w", t.ID, err)
+		}
 	}
 	for i, r := range t.Requests {
 		if r.Method == "" {

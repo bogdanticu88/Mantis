@@ -66,9 +66,27 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 		vars[k] = v
 	}
 
+	// Pre-parse the flow script once (Validate already checked the syntax, so
+	// this should never fail in practice, but we handle it cleanly regardless).
+	var flowNodes []flowNode
+	if tpl.Flow != "" {
+		var err error
+		flowNodes, err = parseFlow(tpl.Flow)
+		if err != nil {
+			return RunResult{Template: tpl, Target: target, Error: err}
+		}
+	}
+
+	dispatch := func(v map[string]string) RunResult {
+		if flowNodes != nil {
+			return executeFlowChain(ctx, client, redactor, tpl, target, environment, v, hook, flowNodes)
+		}
+		return executeChain(ctx, client, redactor, tpl, target, environment, v, hook)
+	}
+
 	combos := generatePayloadCombinations(tpl)
 	if len(combos) == 0 {
-		return executeChain(ctx, client, redactor, tpl, target, environment, vars, hook)
+		return dispatch(vars)
 	}
 
 	var allFindings []findings.Finding
@@ -81,7 +99,7 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 		for k, v := range combo {
 			iterVars[k] = v
 		}
-		r := executeChain(ctx, client, redactor, tpl, target, environment, iterVars, hook)
+		r := dispatch(iterVars)
 		if r.Error != nil {
 			// A transport error on one payload does not abort the rest of the
 			// set. The caller can correlate by inspecting findings vs payloads.
