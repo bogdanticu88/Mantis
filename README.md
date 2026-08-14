@@ -45,6 +45,31 @@ and a small DSL for matcher/assertion expressions - parsed with Go's own
 `go/parser` instead of a third-party expression library. 22 starter
 templates ship in `templates-community/` (see `mantis templates list`).
 
+**Payload fuzzing.** A `payloads` block defines named value lists that get
+substituted into `{{name}}` placeholders in any request field. Three attack
+modes: `sniper` (one set, one value at a time), `pitchfork` (multiple sets
+zipped in lockstep), and `clusterbomb` (full Cartesian product of all sets).
+Every combination runs the full request chain independently.
+
+**Conditional steps.** A `when` field on any request takes a DSL expression
+evaluated against variables extracted by earlier steps. A false result skips
+that request without failing the chain, so a template can branch on what it
+actually found rather than what it assumed.
+
+**Flow scripting.** The optional `flow` field replaces the default sequential
+chain with a small scripting language: `http(N)` calls requests by index,
+`if`/`else`/`end` branches on conditions (including `httpN_status`,
+`httpN_matched`, `httpN_body` after each call), `set name = expr` stores a
+value for later steps and `{{name}}` rendering, and `stop` terminates early
+keeping any findings produced so far.
+
+**Global matchers.** A passive layer runs against every HTTP response in
+every template execution - no extra requests. Eight built-in patterns catch
+secrets and noise that templates don't explicitly look for: AWS keys,
+private key material, JWTs, SQL error messages, stack traces, PHP errors,
+and ASP.NET errors. Findings from this layer are reported separately from
+template-match findings.
+
 ### DAST
 
 A crawler with inline passive checks (missing security headers, insecure
@@ -119,6 +144,7 @@ internal/
   dsl/                 the matcher/assertion expression language
   jsonpath/             minimal JSONPath used by matchers and extractors
   dast/                crawler + passive checks + active scan orchestration
+  globalmatchers/       passive secret/error patterns evaluated on every response
   attacks/              per-parameter fuzzing (sqli/xss/path-traversal/ssti/cmdi)
   smoke/               smoke workflow parsing and execution
   api/                 OpenAPI reader + generated API security checks
@@ -432,6 +458,38 @@ optional `headers`/`body`, `matchers`, and `extractors`. Matchers support
 `starts_with`, `ends_with`, `len`, `regex`, `to_lower`, `to_upper`,
 `header(name)`). Variables use `${name}` or `{{name}}` placeholders in
 path/headers/body.
+
+`payloads` (optional) defines named value lists; `attack` sets the
+combination mode (`sniper` / `pitchfork` / `clusterbomb`). Each request
+can carry a `when` DSL expression to skip it conditionally based on
+variables from earlier steps.
+
+`flow` (optional) replaces the sequential chain with an explicit script.
+Statement reference:
+
+```
+http(N)            — run request N (1-indexed); populates http<N>_status
+                     (int), http<N>_body (string), http<N>_matched (bool)
+if <expr>          — DSL condition; any variable or httpN_* is available
+else               — optional alternative branch
+end                — closes an if block
+set name = <expr>  — evaluate expression and store result; {{name}} renders it
+stop               — terminate the flow, keep findings collected so far
+# comment          — ignored
+```
+
+Example:
+
+```yaml
+flow: |
+  http(1)
+  if http1_matched
+    http(2)
+    if http2_status == 200 && contains(http2_body, "admin")
+      http(3)
+    end
+  end
+```
 
 **Smoke workflows** (`smoke/*.yaml`): an ordered list of `steps`, each with
 a `request`, `assertions` (`status`, `path` + `exists`/`equals`, or a raw
