@@ -68,6 +68,8 @@ func templatesTest(args []string) error {
 	target := fs.String("target", "", "target base URL (required)")
 	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification")
 	timeout := fs.Duration("timeout", 15*time.Second, "per-request timeout")
+	clientCert := fs.String("client-cert", "", "path to PEM client certificate for mTLS")
+	clientKey := fs.String("client-key", "", "path to PEM client private key for mTLS")
 	fs.Parse(args)
 
 	if *file == "" || *target == "" {
@@ -79,7 +81,7 @@ func templatesTest(args []string) error {
 		return err
 	}
 
-	client, err := buildClient(environments.PolicyFor("standard"), *insecure, *timeout, *target, nil, nil)
+	client, err := buildClient(environments.PolicyFor("standard"), *insecure, *timeout, *target, *clientCert, *clientKey, nil, nil)
 	if err != nil {
 		return err
 	}

@@ -32,6 +32,7 @@ type crawlItem struct {
 func (c *Crawler) Crawl(ctx context.Context, seed, environment string, redactor *httpclient.Redactor) (*AttackSurface, []findings.Finding, error) {
 	visited := map[string]bool{}
 	formSeen := map[string]bool{}
+	cookieSeen := map[string]bool{}
 	queue := []crawlItem{{url: seed, depth: 0}}
 	surface := &AttackSurface{}
 	var passiveFindings []findings.Finding
@@ -66,6 +67,14 @@ func (c *Crawler) Crawl(ctx context.Context, seed, environment string, redactor 
 		surface.URLs = append(surface.URLs, item.url)
 		passiveFindings = append(passiveFindings, RunPassiveChecks(item.url, environment, resp, redactor)...)
 
+		for _, line := range resp.Headers["Set-Cookie"] {
+			name := cookieName(line)
+			if name != "" && !cookieSeen[name] {
+				cookieSeen[name] = true
+				surface.Cookies = append(surface.Cookies, name)
+			}
+		}
+
 		if !isHTML(resp) {
 			continue
 		}
@@ -86,6 +95,19 @@ func (c *Crawler) Crawl(ctx context.Context, seed, environment string, redactor 
 	}
 
 	return surface, passiveFindings, nil
+}
+
+// cookieName extracts the cookie name from a raw Set-Cookie header value.
+// The name is everything before the first '=' or ';', trimmed of whitespace.
+func cookieName(raw string) string {
+	s := raw
+	if i := strings.IndexByte(s, ';'); i >= 0 {
+		s = s[:i]
+	}
+	if i := strings.IndexByte(s, '='); i >= 0 {
+		s = s[:i]
+	}
+	return strings.TrimSpace(s)
 }
 
 func isHTML(resp *httpclient.Response) bool {

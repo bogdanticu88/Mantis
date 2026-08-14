@@ -84,6 +84,8 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 		attackForms[i] = attacks.Form{Action: f.Action, Method: f.Method, Inputs: f.Inputs}
 	}
 	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzForms(ctx, client, redactor, attackForms, fuzzOpts)...)
+	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzHeaders(ctx, client, redactor, surface.URLs, fuzzOpts)...)
+	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzCookies(ctx, client, redactor, surface.Cookies, surface.URLs, fuzzOpts)...)
 
 	return result, nil
 }

@@ -15,6 +15,21 @@ func newVulnerableServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/header-reflect", func(w http.ResponseWriter, r *http.Request) {
+		// reflects X-Forwarded-For back - header injection test target
+		val := r.Header.Get("X-Forwarded-For")
+		w.Write([]byte("ip: " + val))
+	})
+	mux.HandleFunc("/cookie-reflect", func(w http.ResponseWriter, r *http.Request) {
+		// reflects the session cookie back - cookie injection test target
+		for _, c := range r.Cookies() {
+			if c.Name == "session" {
+				w.Write([]byte("cookie: " + c.Value))
+				return
+			}
+		}
+		w.Write([]byte("no cookie"))
+	})
 	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
 		// reflects the query param unescaped - classic XSS
 		body := "<html><body>results for: " + r.URL.Query().Get("q") + "</body></html>"
@@ -172,6 +187,71 @@ func TestFuzzForms_POSTFormFuzzedWithDestructive(t *testing.T) {
 
 	if len(fs) == 0 {
 		t.Error("expected a cmdi finding when fuzzing a POST form with Destructive: true")
+	}
+}
+
+func TestFuzzHeaders_DetectsInjection(t *testing.T) {
+	srv := newVulnerableServer(t)
+	defer srv.Close()
+
+	urls := []string{srv.URL + "/header-reflect"}
+	fs := FuzzHeaders(context.Background(), newTestClient(t), httpclient.NewRedactor(), urls, Options{
+		Environment: "test",
+		Classes:     []string{"xss"},
+	})
+
+	if len(fs) == 0 {
+		t.Error("expected at least one XSS finding from header injection, got none")
+	}
+}
+
+func TestFuzzHeaders_RespectsMaxRequests(t *testing.T) {
+	var requestCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	FuzzHeaders(context.Background(), newTestClient(t), httpclient.NewRedactor(), []string{srv.URL + "/x"}, Options{
+		Environment: "test",
+		MaxRequests: 2,
+	})
+
+	if requestCount != 2 {
+		t.Errorf("MaxRequests=2 but server received %d requests", requestCount)
+	}
+}
+
+func TestFuzzCookies_DetectsInjection(t *testing.T) {
+	srv := newVulnerableServer(t)
+	defer srv.Close()
+
+	urls := []string{srv.URL + "/cookie-reflect"}
+	fs := FuzzCookies(context.Background(), newTestClient(t), httpclient.NewRedactor(), []string{"session"}, urls, Options{
+		Environment: "test",
+		Classes:     []string{"xss"},
+	})
+
+	if len(fs) == 0 {
+		t.Error("expected at least one XSS finding from cookie injection, got none")
+	}
+}
+
+func TestFuzzCookies_EmptyInputProducesNoFindings(t *testing.T) {
+	srv := newVulnerableServer(t)
+	defer srv.Close()
+
+	// no cookie names - nothing to fuzz
+	fs := FuzzCookies(context.Background(), newTestClient(t), httpclient.NewRedactor(), nil, []string{srv.URL + "/"}, Options{Environment: "test"})
+	if len(fs) != 0 {
+		t.Errorf("expected zero findings with no cookie names, got %d", len(fs))
+	}
+
+	// no urls - nothing to fuzz
+	fs = FuzzCookies(context.Background(), newTestClient(t), httpclient.NewRedactor(), []string{"session"}, nil, Options{Environment: "test"})
+	if len(fs) != 0 {
+		t.Errorf("expected zero findings with no urls, got %d", len(fs))
 	}
 }
 

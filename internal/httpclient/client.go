@@ -33,6 +33,12 @@ type Config struct {
 	InsecureSkipVerify bool
 	AllowedHosts       []string // if non-empty, only these hosts (suffix match) may be requested
 	DeniedHosts        []string // always denied, checked after allowlist
+
+	// ClientCertFile and ClientKeyFile are paths to PEM-encoded files for
+	// mutual TLS. Both must be set together; if either is empty no client
+	// cert is presented (plain TLS, no mTLS).
+	ClientCertFile string
+	ClientKeyFile  string
 }
 
 func (c Config) withDefaults() Config {
@@ -89,8 +95,17 @@ func New(cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("httpclient: creating cookie jar: %w", err)
 	}
 
+	tlsCfg := &tls.Config{InsecureSkipVerify: cfg.InsecureSkipVerify}
+	if cfg.ClientCertFile != "" && cfg.ClientKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.ClientCertFile, cfg.ClientKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("httpclient: loading client certificate: %w", err)
+		}
+		tlsCfg.Certificates = []tls.Certificate{cert}
+	}
+
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.InsecureSkipVerify},
+		TLSClientConfig: tlsCfg,
 	}
 
 	hc := &http.Client{

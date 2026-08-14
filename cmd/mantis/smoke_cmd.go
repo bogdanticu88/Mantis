@@ -23,6 +23,8 @@ func cmdSmoke(args []string) error {
 	outputDir := fs.String("output-dir", "", "directory for default-named report files when writing multiple formats (default: current directory)")
 	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification")
 	timeout := fs.Duration("timeout", 15*time.Second, "per-request timeout")
+	clientCert := fs.String("client-cert", "", "path to PEM client certificate for mTLS")
+	clientKey := fs.String("client-key", "", "path to PEM client private key for mTLS")
 	fs.Parse(args)
 
 	baseURL, policy, auth, appName, err := resolveTargetAndPolicy(*envFile, *environment, *target)
@@ -33,7 +35,7 @@ func cmdSmoke(args []string) error {
 		return fmt.Errorf("smoke testing is disabled by policy for this environment")
 	}
 
-	client, err := buildClient(policy, *insecure, *timeout, baseURL, nil, nil)
+	client, err := buildClient(policy, *insecure, *timeout, baseURL, *clientCert, *clientKey, nil, nil)
 	if err != nil {
 		return err
 	}

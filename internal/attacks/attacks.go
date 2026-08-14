@@ -114,6 +114,102 @@ func FuzzForms(ctx context.Context, client *httpclient.Client, redactor *httpcli
 	return out
 }
 
+// fuzzableHeaders is the fixed set of request headers commonly used as
+// injection vectors: IP spoofing bypasses, WAF evasion, and reflected-value
+// injection through headers that get echoed back in responses or logs.
+var fuzzableHeaders = []string{
+	"X-Forwarded-For",
+	"X-Real-IP",
+	"X-Originating-IP",
+	"X-Remote-Addr",
+	"X-Client-IP",
+	"Referer",
+}
+
+// FuzzHeaders injects payloads into security-relevant request headers for
+// each discovered URL. Runs unconditionally under an active-testing policy
+// (header injection is always a GET with no side-effects on the target's
+// data layer, regardless of what headers say about the caller's identity).
+func FuzzHeaders(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, urls []string, opts Options) []findings.Finding {
+	b := &budget{remaining: opts.maxRequests()}
+	sortedURLs := append([]string(nil), urls...)
+	sort.Strings(sortedURLs)
+
+	seen := map[string]bool{}
+	var targets []string
+	for _, u := range sortedURLs {
+		if !seen[u] {
+			seen[u] = true
+			targets = append(targets, u)
+		}
+	}
+
+	var out []findings.Finding
+	for _, rawURL := range targets {
+		for _, hdr := range fuzzableHeaders {
+			for _, class := range sortedClasses(opts.Classes) {
+				for _, p := range payloadsByClass[class] {
+					if !b.take() {
+						return out
+					}
+					req := httpclient.Request{
+						Method:  "GET",
+						URL:     rawURL,
+						Headers: map[string]string{hdr: p.Value},
+					}
+					resp, err := client.Do(ctx, req)
+					if err != nil {
+						continue
+					}
+					if ok, on := matched(p, string(resp.Body)); ok {
+						out = append(out, mkFinding(class, hdr, "GET", rawURL, opts.Environment, p, on, resp, redactor))
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
+// FuzzCookies injects payloads into cookie values for each (cookie-name, url)
+// pair discovered during crawling. Like header fuzzing this is always GET-safe.
+func FuzzCookies(ctx context.Context, client *httpclient.Client, redactor *httpclient.Redactor, cookieNames []string, urls []string, opts Options) []findings.Finding {
+	if len(cookieNames) == 0 || len(urls) == 0 {
+		return nil
+	}
+	b := &budget{remaining: opts.maxRequests()}
+	sortedURLs := append([]string(nil), urls...)
+	sort.Strings(sortedURLs)
+	sortedNames := append([]string(nil), cookieNames...)
+	sort.Strings(sortedNames)
+
+	var out []findings.Finding
+	for _, rawURL := range sortedURLs {
+		for _, name := range sortedNames {
+			for _, class := range sortedClasses(opts.Classes) {
+				for _, p := range payloadsByClass[class] {
+					if !b.take() {
+						return out
+					}
+					req := httpclient.Request{
+						Method:  "GET",
+						URL:     rawURL,
+						Headers: map[string]string{"Cookie": name + "=" + p.Value},
+					}
+					resp, err := client.Do(ctx, req)
+					if err != nil {
+						continue
+					}
+					if ok, on := matched(p, string(resp.Body)); ok {
+						out = append(out, mkFinding(class, name, "GET", rawURL, opts.Environment, p, on, resp, redactor))
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
 func sortedClasses(selected []string) []string {
 	m := payloadsFor(selected)
 	out := make([]string, 0, len(m))

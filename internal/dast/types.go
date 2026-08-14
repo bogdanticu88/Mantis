@@ -13,6 +13,7 @@ type Form struct {
 // AttackSurface is everything the crawler found: candidate endpoints and
 // forms to feed into passive/active testing.
 type AttackSurface struct {
-	URLs  []string
-	Forms []Form
+	URLs    []string
+	Forms   []Form
+	Cookies []string // names of cookies observed in Set-Cookie headers during crawl
 }

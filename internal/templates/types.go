@@ -23,7 +23,7 @@ var validSeverities = map[string]bool{
 }
 
 // Matcher describes a single condition evaluated against a response.
-// Type is one of: status, word, regex, json, dsl.
+// Type is one of: status, word, regex, json, dsl, timing.
 type Matcher struct {
 	Type string `yaml:"type"`
 
@@ -42,6 +42,11 @@ type Matcher struct {
 
 	// dsl
 	DSL string `yaml:"dsl,omitempty"`
+
+	// timing: matches when the response took >= MinDurationMS milliseconds.
+	// Useful for detecting blind time-based injection (SQLi, SSRF delays, etc.)
+	// where the payload causes the server to sleep before responding.
+	MinDurationMS int64 `yaml:"duration_ms,omitempty"`
 
 	Negative bool `yaml:"negative,omitempty"`
 }
@@ -194,6 +199,10 @@ func (m Matcher) validate() error {
 	case "dsl":
 		if m.DSL == "" {
 			return fmt.Errorf("dsl matcher requires an expression")
+		}
+	case "timing":
+		if m.MinDurationMS <= 0 {
+			return fmt.Errorf("timing matcher requires duration_ms > 0")
 		}
 	default:
 		return fmt.Errorf("unknown matcher type %q", m.Type)

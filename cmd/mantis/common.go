@@ -121,7 +121,7 @@ func resolveIdentities(envFile, envName string) []environments.Identity {
 	return res.Identities
 }
 
-func buildClient(policy environments.Policy, insecure bool, timeout time.Duration, target string, extraAllowed, denied []string) (*httpclient.Client, error) {
+func buildClient(policy environments.Policy, insecure bool, timeout time.Duration, target, clientCert, clientKey string, extraAllowed, denied []string) (*httpclient.Client, error) {
 	allowed := extraAllowed
 	if len(allowed) == 0 {
 		if u, err := url.Parse(target); err == nil && u.Hostname() != "" {
@@ -136,6 +136,8 @@ func buildClient(policy environments.Policy, insecure bool, timeout time.Duratio
 		AllowedHosts:       allowed,
 		DeniedHosts:        denied,
 		Retries:            1,
+		ClientCertFile:     clientCert,
+		ClientKeyFile:      clientKey,
 	}
 	return httpclient.New(cfg)
 }

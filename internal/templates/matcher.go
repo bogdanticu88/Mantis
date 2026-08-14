@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/bogdanticu88/Mantis/internal/dsl"
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
@@ -128,6 +129,12 @@ func evalMatcher(m Matcher, resp *httpclient.Response) (matchResult, error) {
 		}
 		return finish(m, matched, []string{m.DSL}), nil
 
+	case "timing":
+		threshold := time.Duration(m.MinDurationMS) * time.Millisecond
+		ok := resp.Duration >= threshold
+		label := fmt.Sprintf("duration:%dms >= %dms", resp.Duration.Milliseconds(), m.MinDurationMS)
+		return finish(m, ok, []string{label}), nil
+
 	default:
 		return matchResult{}, fmt.Errorf("unknown matcher type %q", m.Type)
 	}
@@ -178,6 +185,7 @@ func buildDSLEnv(resp *httpclient.Response) dsl.Env {
 			"content_length": int64(len(resp.Body)),
 			"url":            resp.Request.URL,
 			"method":         resp.Request.Method,
+			"duration_ms":    resp.Duration.Milliseconds(),
 		},
 		Funcs: funcs,
 	}

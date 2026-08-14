@@ -3,6 +3,7 @@ package templates
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
@@ -142,6 +143,41 @@ func TestEvalMatcher_Negative(t *testing.T) {
 	got, err := evalMatcher(Matcher{Type: "word", Words: []string{"actuator"}, Negative: true}, r)
 	if err != nil || !got.Matched {
 		t.Errorf("negative word matcher on absent word = %v, %v; want matched (absence confirmed)", got, err)
+	}
+}
+
+func TestEvalMatcher_Timing(t *testing.T) {
+	fast := &httpclient.Response{
+		Request:    httpclient.Request{Method: "GET", URL: "https://example.com/"},
+		StatusCode: 200,
+		Duration:   100 * time.Millisecond,
+	}
+	slow := &httpclient.Response{
+		Request:    httpclient.Request{Method: "GET", URL: "https://example.com/"},
+		StatusCode: 200,
+		Duration:   6 * time.Second,
+	}
+
+	got, err := evalMatcher(Matcher{Type: "timing", MinDurationMS: 5000}, slow)
+	if err != nil || !got.Matched {
+		t.Errorf("timing matcher should match a slow response (6s >= 5s): %v, %v", got, err)
+	}
+
+	got, err = evalMatcher(Matcher{Type: "timing", MinDurationMS: 5000}, fast)
+	if err != nil || got.Matched {
+		t.Errorf("timing matcher should not match a fast response (100ms < 5s): %v, %v", got, err)
+	}
+}
+
+func TestEvalMatcher_DSL_DurationMS(t *testing.T) {
+	r := &httpclient.Response{
+		Request:    httpclient.Request{Method: "GET", URL: "https://example.com/"},
+		StatusCode: 200,
+		Duration:   7 * time.Second,
+	}
+	got, err := evalMatcher(Matcher{Type: "dsl", DSL: "duration_ms > 5000"}, r)
+	if err != nil || !got.Matched {
+		t.Errorf("dsl matcher using duration_ms should match a slow response: %v, %v", got, err)
 	}
 }
 

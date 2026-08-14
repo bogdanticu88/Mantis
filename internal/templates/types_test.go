@@ -134,6 +134,20 @@ func TestValidate_PayloadFields(t *testing.T) {
 	})
 }
 
+func TestValidate_TimingMatcher(t *testing.T) {
+	tpl := validTemplate()
+	tpl.Requests[0].Matchers = []Matcher{{Type: "timing", MinDurationMS: 5000}}
+	if err := tpl.Validate(); err != nil {
+		t.Errorf("timing matcher with duration_ms=5000 should be valid: %v", err)
+	}
+
+	tpl2 := validTemplate()
+	tpl2.Requests[0].Matchers = []Matcher{{Type: "timing"}}
+	if err := tpl2.Validate(); err == nil {
+		t.Error("timing matcher without duration_ms should fail validation")
+	}
+}
+
 func TestValidate_ExtractorRejections(t *testing.T) {
 	cases := map[string]Extractor{
 		"no name":               {Type: "json", Path: "$.a"},
