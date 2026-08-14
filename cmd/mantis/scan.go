@@ -27,6 +27,8 @@ func cmdScan(args []string) error {
 	timeout := fs.Duration("timeout", 15*time.Second, "per-request timeout")
 	clientCert := fs.String("client-cert", "", "path to PEM client certificate for mTLS")
 	clientKey := fs.String("client-key", "", "path to PEM client private key for mTLS")
+	oobServer := fs.String("oob-server", "", "interactsh-compatible OOB server for blind detection (e.g. https://interact.sh)")
+	oobWait := fs.Duration("oob-wait", 5*time.Second, "time to wait for OOB callbacks after templates finish")
 	flagArgs, positional := splitArgs(fs, args)
 	fs.Parse(flagArgs)
 
@@ -65,6 +67,7 @@ func cmdScan(args []string) error {
 	}
 
 	baseVars := mergeVars(map[string]string{"BaseURL": baseURL}, authVars(headers))
+	oobSession := setupOOB(ctx, *oobServer, baseVars)
 
 	var allFindings []findings.Finding
 	for _, tpl := range tpls {
@@ -75,6 +78,8 @@ func cmdScan(args []string) error {
 		}
 		allFindings = append(allFindings, r.Findings...)
 	}
+
+	allFindings = collectOOBFindings(ctx, oobSession, *oobWait, allFindings, *environment, baseURL)
 
 	rpt := reporters.Report{
 		Application: appName,

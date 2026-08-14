@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/bogdanticu88/Mantis/internal/environments"
+	"github.com/bogdanticu88/Mantis/internal/findings"
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
+	"github.com/bogdanticu88/Mantis/internal/oob"
 	"github.com/bogdanticu88/Mantis/internal/reporters"
 )
 
@@ -150,6 +152,12 @@ func resolveAuth(ctx context.Context, client *httpclient.Client, auth *environme
 		return nil, nil, nil
 	}
 	switch strings.ToLower(auth.Type) {
+	case "apikey":
+		if auth.Header == "" || auth.Value == "" {
+			return nil, nil, nil
+		}
+		return map[string]string{auth.Header: auth.Value}, []string{auth.Value}, nil
+
 	case "bearer":
 		if auth.Token == "" {
 			return nil, nil, nil
@@ -299,6 +307,46 @@ func writeFormat(format string, w io.Writer, report reporters.Report) error {
 	default:
 		return fmt.Errorf("unknown report format %q (want json|sarif|junit|html|azdo|github|console)", format)
 	}
+}
+
+// setupOOB registers an OOB session if serverURL is non-empty. On success it
+// writes oob_host into vars and returns the session for polling after the scan.
+// Errors are non-fatal: printed to stderr, scan continues without OOB.
+func setupOOB(ctx context.Context, serverURL string, vars map[string]string) *oob.Session {
+	if serverURL == "" {
+		return nil
+	}
+	s, err := oob.Register(ctx, serverURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "mantis: oob: %v\n", err)
+		return nil
+	}
+	vars["oob_host"] = s.Host
+	fmt.Fprintf(os.Stderr, "mantis: oob registered; callback host: %s\n", s.Host)
+	return s
+}
+
+// collectOOBFindings polls the OOB session after the scan wait, appends any
+// received callbacks as findings, and returns the extended slice.
+func collectOOBFindings(ctx context.Context, s *oob.Session, wait time.Duration, existing []findings.Finding, environment, target string) []findings.Finding {
+	if s == nil {
+		return existing
+	}
+	if wait > 0 {
+		time.Sleep(wait)
+	}
+	callbacks, err := s.Poll(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "mantis: oob poll: %v\n", err)
+		return existing
+	}
+	for _, cb := range callbacks {
+		existing = append(existing, oob.ToFinding(cb, environment, target))
+	}
+	if len(callbacks) > 0 {
+		fmt.Fprintf(os.Stderr, "mantis: oob: %d callback(s) received\n", len(callbacks))
+	}
+	return existing
 }
 
 func fileExists(path string) bool {

@@ -15,7 +15,7 @@ import (
 // since actual secrets have no business being committed into
 // environments.yaml.
 type AuthConfig struct {
-	Type         string `yaml:"type"` // bearer, basic, oauth2, session
+	Type         string `yaml:"type"` // bearer, basic, oauth2, session, apikey
 	Token        string `yaml:"token,omitempty"`
 	Username     string `yaml:"username,omitempty"`
 	Password     string `yaml:"password,omitempty"`
@@ -24,6 +24,12 @@ type AuthConfig struct {
 	ClientSecret string `yaml:"client_secret,omitempty"`
 	LoginPath    string `yaml:"login_path,omitempty"`
 	LoginBody    string `yaml:"login_body,omitempty"`
+
+	// apikey: inject a static key into a named request header.
+	// Works for Azure APIM (Ocp-Apim-Subscription-Key), custom API gateways,
+	// and any other header-based key scheme.
+	Header string `yaml:"header,omitempty"`
+	Value  string `yaml:"value,omitempty"`
 }
 
 // Secrets returns the resolved secret values that must never be written to
@@ -32,7 +38,7 @@ func (a *AuthConfig) Secrets() []string {
 	if a == nil {
 		return nil
 	}
-	return []string{a.Token, a.Password, a.ClientSecret}
+	return []string{a.Token, a.Password, a.ClientSecret, a.Value}
 }
 
 // Identity is a second (third, ...) set of credentials for the same
@@ -105,6 +111,7 @@ func expandAuth(a *AuthConfig) *AuthConfig {
 	out.Password = expandEnv(out.Password)
 	out.ClientID = expandEnv(out.ClientID)
 	out.ClientSecret = expandEnv(out.ClientSecret)
+	out.Value = expandEnv(out.Value)
 	return &out
 }
 

@@ -35,6 +35,8 @@ func cmdValidate(args []string) error {
 	timeout := fs.Duration("timeout", 15*time.Second, "per-request timeout")
 	clientCert := fs.String("client-cert", "", "path to PEM client certificate for mTLS")
 	clientKey := fs.String("client-key", "", "path to PEM client private key for mTLS")
+	oobServer := fs.String("oob-server", "", "interactsh-compatible OOB server for blind detection (e.g. https://interact.sh)")
+	oobWait := fs.Duration("oob-wait", 5*time.Second, "time to wait for OOB callbacks after scan completes")
 	destructive := fs.Bool("destructive", false, "allow destructive testing (non-GET form fuzzing, state-changing API method probes) - also requires the environment's policy to allow it")
 	fs.Parse(args)
 
@@ -68,6 +70,7 @@ func cmdValidate(args []string) error {
 	}
 	redactor := httpclient.NewRedactor(secrets...)
 	baseVars := mergeVars(map[string]string{"BaseURL": baseURL}, authVars(headers))
+	oobSession := setupOOB(ctx, *oobServer, baseVars)
 
 	var allFindings []findings.Finding
 	var smokeSummaries []reporters.SmokeWorkflowSummary
@@ -127,6 +130,8 @@ func cmdValidate(args []string) error {
 			allFindings = append(allFindings, apiFindings...)
 		}
 	}
+
+	allFindings = collectOOBFindings(ctx, oobSession, *oobWait, allFindings, *environment, baseURL)
 
 	rpt := reporters.Report{
 		Application: appName,

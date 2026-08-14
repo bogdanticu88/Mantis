@@ -28,6 +28,8 @@ func cmdDast(args []string) error {
 	timeout := fs.Duration("timeout", 15*time.Second, "per-request timeout")
 	clientCert := fs.String("client-cert", "", "path to PEM client certificate for mTLS")
 	clientKey := fs.String("client-key", "", "path to PEM client private key for mTLS")
+	oobServer := fs.String("oob-server", "", "interactsh-compatible OOB server for blind detection (e.g. https://interact.sh)")
+	oobWait := fs.Duration("oob-wait", 5*time.Second, "time to wait for OOB callbacks after scan completes")
 	destructive := fs.Bool("destructive", false, "allow fuzzing non-GET form fields (real POST/PUT/PATCH submissions carrying injection payloads) - also requires the environment's policy to allow destructive testing")
 	flagArgs, positional := splitArgs(fs, args)
 	fs.Parse(flagArgs)
@@ -69,6 +71,7 @@ func cmdDast(args []string) error {
 	}
 
 	baseVars := mergeVars(map[string]string{"BaseURL": baseURL}, authVars(headers))
+	oobSession := setupOOB(ctx, *oobServer, baseVars)
 
 	result, err := dast.Run(ctx, client, redactor, dast.Options{
 		Target:      baseURL,
@@ -87,6 +90,7 @@ func cmdDast(args []string) error {
 	}
 
 	allFindings := append(append([]findings.Finding{}, result.PassiveFindings...), result.ActiveFindings...)
+	allFindings = collectOOBFindings(ctx, oobSession, *oobWait, allFindings, *environment, baseURL)
 
 	rpt := reporters.Report{
 		Application: appName,
