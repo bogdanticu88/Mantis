@@ -86,6 +86,8 @@ func Run(ctx context.Context, client *httpclient.Client, redactor *httpclient.Re
 	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzForms(ctx, client, redactor, attackForms, fuzzOpts)...)
 	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzHeaders(ctx, client, redactor, surface.URLs, fuzzOpts)...)
 	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzCookies(ctx, client, redactor, surface.Cookies, surface.URLs, fuzzOpts)...)
+	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzJSONBody(ctx, client, redactor, surface.JSONEndpoints, fuzzOpts)...)
+	result.ActiveFindings = append(result.ActiveFindings, attacks.FuzzTimingBased(ctx, client, redactor, surface.URLs, fuzzOpts)...)
 
 	return result, nil
 }

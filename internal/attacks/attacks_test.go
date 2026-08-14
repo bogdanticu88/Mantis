@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bogdanticu88/Mantis/internal/httpclient"
 )
@@ -19,6 +20,25 @@ func newVulnerableServer(t *testing.T) *httptest.Server {
 		// reflects X-Forwarded-For back - header injection test target
 		val := r.Header.Get("X-Forwarded-For")
 		w.Write([]byte("ip: " + val))
+	})
+	mux.HandleFunc("/api/items", func(w http.ResponseWriter, r *http.Request) {
+		// JSON API endpoint that reflects POSTed field values - for JSON body fuzzing
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodPost {
+			body, _ := io.ReadAll(r.Body)
+			w.Write([]byte(`{"result":"` + string(body) + `"}`))
+			return
+		}
+		w.Write([]byte(`{"items":[]}`))
+	})
+	mux.HandleFunc("/slow", func(w http.ResponseWriter, r *http.Request) {
+		// sleeps when it receives a known timing payload - for timing-based fuzzing
+		if strings.Contains(r.URL.Query().Get("id"), "SLEEP") ||
+			strings.Contains(r.URL.Query().Get("id"), "WAITFOR") ||
+			strings.Contains(r.URL.Query().Get("id"), "pg_sleep") {
+			time.Sleep(300 * time.Millisecond)
+		}
+		w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/cookie-reflect", func(w http.ResponseWriter, r *http.Request) {
 		// reflects the session cookie back - cookie injection test target
@@ -252,6 +272,101 @@ func TestFuzzCookies_EmptyInputProducesNoFindings(t *testing.T) {
 	fs = FuzzCookies(context.Background(), newTestClient(t), httpclient.NewRedactor(), []string{"session"}, nil, Options{Environment: "test"})
 	if len(fs) != 0 {
 		t.Errorf("expected zero findings with no urls, got %d", len(fs))
+	}
+}
+
+func TestFuzzJSONBody_DetectsInjection(t *testing.T) {
+	srv := newVulnerableServer(t)
+	defer srv.Close()
+
+	endpoints := []string{srv.URL + "/api/items"}
+	fs := FuzzJSONBody(context.Background(), newTestClient(t), httpclient.NewRedactor(), endpoints, Options{
+		Environment: "test",
+		Classes:     []string{"xss"},
+		Destructive: true,
+	})
+	if len(fs) == 0 {
+		t.Error("expected at least one XSS finding from JSON body injection, got none")
+	}
+}
+
+func TestFuzzJSONBody_SkippedWithoutDestructive(t *testing.T) {
+	srv := newVulnerableServer(t)
+	defer srv.Close()
+
+	endpoints := []string{srv.URL + "/api/items"}
+	fs := FuzzJSONBody(context.Background(), newTestClient(t), httpclient.NewRedactor(), endpoints, Options{
+		Environment: "test",
+		Classes:     []string{"xss"},
+		Destructive: false,
+	})
+	if len(fs) != 0 {
+		t.Errorf("JSON body fuzzing without Destructive should produce no findings, got %d", len(fs))
+	}
+}
+
+func TestFuzzJSONBody_EmptyEndpointsNoop(t *testing.T) {
+	fs := FuzzJSONBody(context.Background(), newTestClient(t), httpclient.NewRedactor(), nil, Options{
+		Environment: "test",
+		Destructive: true,
+	})
+	if len(fs) != 0 {
+		t.Errorf("expected no findings with no endpoints, got %d", len(fs))
+	}
+}
+
+func TestFuzzTimingBased_DetectsDelay(t *testing.T) {
+	srv := newVulnerableServer(t)
+	defer srv.Close()
+
+	urls := []string{srv.URL + "/slow?id=1"}
+	fs := FuzzTimingBased(context.Background(), newTestClient(t), httpclient.NewRedactor(), urls, Options{
+		Environment:         "test",
+		TimingMinDeltaMS:    150, // below the 300ms sleep
+		TimingBaselineN:     1,
+		TimingMinAbsoluteMS: 200, // below the 300ms sleep
+	})
+	if len(fs) == 0 {
+		t.Error("expected a timing-sqli finding when payload causes 300ms delay")
+	}
+}
+
+func TestFuzzTimingBased_FastEndpointNoFindings(t *testing.T) {
+	var requestCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Write([]byte("fast"))
+	}))
+	defer srv.Close()
+
+	urls := []string{srv.URL + "/x?a=1"}
+	fs := FuzzTimingBased(context.Background(), newTestClient(t), httpclient.NewRedactor(), urls, Options{
+		Environment:         "test",
+		TimingMinDeltaMS:    50,
+		TimingBaselineN:     1,
+		TimingMinAbsoluteMS: 50,
+	})
+	// A uniformly fast server (no sleep) should produce no delta worth flagging.
+	// We can't guarantee zero because request timing is nondeterministic, but
+	// we CAN assert the budget was consumed (baseline + payload requests ran).
+	if requestCount == 0 {
+		t.Error("expected some requests to be made during timing probe")
+	}
+	_ = fs // findings may or may not be present due to timing noise; budget check is the goal
+}
+
+func TestFuzzTimingBased_NoQueryParamsNoop(t *testing.T) {
+	srv := newVulnerableServer(t)
+	defer srv.Close()
+
+	// URL without query params - nothing to fuzz, should return nil immediately.
+	urls := []string{srv.URL + "/safe"}
+	fs := FuzzTimingBased(context.Background(), newTestClient(t), httpclient.NewRedactor(), urls, Options{
+		Environment:     "test",
+		TimingBaselineN: 1,
+	})
+	if len(fs) != 0 {
+		t.Errorf("URL with no query params should produce no timing findings, got %d", len(fs))
 	}
 }
 

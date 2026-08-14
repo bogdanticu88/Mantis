@@ -67,6 +67,10 @@ func (c *Crawler) Crawl(ctx context.Context, seed, environment string, redactor 
 		surface.URLs = append(surface.URLs, item.url)
 		passiveFindings = append(passiveFindings, RunPassiveChecks(item.url, environment, resp, redactor)...)
 
+		if isJSON(resp) {
+			surface.JSONEndpoints = append(surface.JSONEndpoints, item.url)
+		}
+
 		for _, line := range resp.Headers["Set-Cookie"] {
 			name := cookieName(line)
 			if name != "" && !cookieSeen[name] {
@@ -113,6 +117,11 @@ func cookieName(raw string) string {
 func isHTML(resp *httpclient.Response) bool {
 	ct := resp.Headers.Get("Content-Type")
 	return strings.Contains(strings.ToLower(ct), "text/html")
+}
+
+func isJSON(resp *httpclient.Response) bool {
+	ct := resp.Headers.Get("Content-Type")
+	return strings.Contains(strings.ToLower(ct), "application/json")
 }
 
 func parseHTML(baseURL string, body []byte) (links []string, forms []Form) {
